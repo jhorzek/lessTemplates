@@ -1,3 +1,67 @@
+#' CLPM
+#'
+#' Creates a cross-lagged panel model from a lavaan-like syntax.
+
+CLPM <- function(model,
+                 data,
+                 addManifestVar = "variant",
+                 addLatentVar = "variant",
+                 meanstructure = FALSE){
+
+  cat("\nSetting up a cross-lagged panel model.\n")
+  RAM <- lessTransformations:::.CLPM(model = model, data = data)
+
+  if(addManifestVar == "invariant"){
+    manifestVar <- diag(RAM@S[RAM@manifest, RAM@manifest])
+    tmpLabels <- paste0("mVar_",
+                        stringr::str_remove(string = names(manifestVar),
+                                            pattern = "_u[0-9]*"))
+    manifestVar[manifestVar=="0"] <- tmpLabels[manifestVar=="0"]
+    diag(RAM@S[RAM@manifest, RAM@manifest]) <- manifestVar
+  }else if(addManifestVar == "variant"){
+    manifestVar <- diag(RAM@S[RAM@manifest, RAM@manifest])
+    tmpLabels <- paste0("mVar_",
+                        names(manifestVar))
+    manifestVar[manifestVar=="0"] <- tmpLabels[manifestVar=="0"]
+    diag(RAM@S[RAM@manifest, RAM@manifest]) <- manifestVar
+  }else if(addManifestVar == "no"){
+  }else{
+    stop("Unknown addManifestVar. Possible are 'invariant', 'variant', or 'no'.")
+  }
+
+  if(addLatentVar == "invariant"){
+    latentVar <- diag(RAM@S[RAM@latent, RAM@latent])
+    tmpLabels <- paste0("lVar_",
+                        stringr::str_remove(string = names(latentVar),
+                                            pattern = "_u[0-9]*"))
+    latentVar[latentVar=="0"] <- tmpLabels[latentVar=="0"]
+    diag(RAM@S[RAM@latent, RAM@latent]) <- latentVar
+  }else if(addLatentVar == "variant"){
+    latentVar <- diag(RAM@S[RAM@latent, RAM@latent])
+    tmpLabels <- paste0("lVar_",
+                        names(latentVar))
+    latentVar[latentVar=="0"] <- tmpLabels[latentVar=="0"]
+    diag(RAM@S[RAM@latent, RAM@latent]) <- latentVar
+  }else if(addLatentVar == "no"){
+  }else{
+    stop("Unknown addLatentVar. Possible are 'invariant', 'variant', or 'no'.")
+  }
+
+  cat("Names of the latent variables:", RAM@latent, "\n")
+  cat("Names of the manifest variables:", RAM@manifest, "\n")
+  lavaanSyntax <- lessTransformations:::.RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
+  dataWide <- try(lessTransformations:::.toWide(data = data, RAM = RAM))
+  if(is(object = dataWide, class2 = "try-error")){
+    warning("Could not transform your data set from long to wide. Returning only the model")
+    return(list(model = lavaanSyntax,
+                data = NULL))
+  }
+
+  cat("Returning lavaan syntax and data in wide format\n")
+  return(list(model = lavaanSyntax,
+              data = dataWide))
+}
+
 #' .CLPM
 #'
 #' creates a cross-laged panel model in RAM notation from a syntax similar to that
@@ -16,8 +80,6 @@
     data <- as.data.frame(data)
 
   nOccasions <- length(unique(data$occasion))
-
-  message("Found ", nOccasions, " occasions in the data set.")
 
   # remove unnecessary white space
   syntax <- lessSEM:::.reduceSyntax(syntax = model)
@@ -114,6 +176,10 @@
                                            replacement = paste0("u", occasions_u$evaluated[i]))
     }
 
+    # remove parts which now end in the operator
+    syntax_u <- syntax_u[!grepl(pattern = "[=~]$",
+                                x = syntax_u)]
+
     for(i in 1:length(syntax_u)){
       splitted <- lessTransformations:::.splitEquation(equation = syntax_u[i])
 
@@ -167,7 +233,12 @@
 
   S <- .fillCovariances(S = S,
                         latents = latents,
-                        maxLag = maxlag)
+                        maxLag = maxLag)
+
+  # we also take care of the initial means
+  M <- .fillIntercepts(M = M,
+                       latents = latents,
+                       maxLag = maxLag)
 
   RAM <- new("RAM")
   RAM@A <- A
@@ -329,7 +400,7 @@
 #' @keywords internal
 .fillCovariances <- function(S, latents, maxLag){
   latentNames <- paste0(latents$occasionDependent, "_u", rep(1:maxLag, each = length(latents$occasionDependent)))
-  covs <- matrix(paste0("initial_",
+  covs <- matrix(paste0("initialCov_",
                         rep(1:length(latentNames), each = length(latentNames)),
                         rep(1:length(latentNames), length(latentNames))),
                  nrow = length(latentNames), ncol = length(latentNames),
@@ -339,6 +410,33 @@
   S[latentNames, latentNames] <- covs
 
   return(S)
+}
+
+#' .fillIntercepts
+#'
+#' fills the intercepts for latent variables which are considered initial intercepts
+#' @param M M matrix with means and intercepts
+#' @param latents data.frame with names of latent variables
+#' @param maxLag larges lag in the equations
+#' @return updated M matrix
+#' @keywords internal
+.fillIntercepts <- function(M = M,
+                            latents = latents,
+                            maxLag = maxLag){
+
+  latentNames <- paste0(latents$occasionDependent, "_u", rep(1:maxLag, each = length(latents$occasionDependent)))
+
+  if(any(M[1, latentNames] != "0")){
+    means <- matrix(paste0("initialMean_",
+                           1:length(latentNames)),
+                    nrow = 1, ncol = length(latentNames),
+                    byrow = TRUE
+    )
+  }
+
+  M[1, latentNames] <- means
+
+  return(means)
 }
 
 
