@@ -1,0 +1,21 @@
+Package: lessTransformations
+Type: Package
+Title: Provides transformation for use in lessSEM
+Version: 0.1.0
+Author: Jannik H. Orzek
+Maintainer: Jannik H. Orzek <orzek@mpib-berlin.mpg.de>
+Description: lessTransformations provides convenience functions which allow for 
+    easier implementations of regularized structural equation models with the
+    lessSEM package. 
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Depends: dplyr
+Imports: tidyr, stringr, lessSEM
+RoxygenNote: 7.2.1
+Suggests: 
+    mvtnorm, 
+    lavaan,
+    stringr,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
