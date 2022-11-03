@@ -89,15 +89,15 @@
   for(i in 1:nrow(RAM@A)){
     for(j in 1:ncol(RAM@A)){
       if(isLabel(RAM@A[i,j])){
-        RAM@A[i,j] <- paste0("label(",RAM@A[i,j], ")")
+        RAM@A[i,j] <- paste0("label('",RAM@A[i,j], "')")
       }
       if(isLabel(RAM@S[i,j])){
-        RAM@S[i,j] <- paste0("label(",RAM@S[i,j], ")")
+        RAM@S[i,j] <- paste0("label('",RAM@S[i,j], "')")
       }
     }
 
     if(isLabel(RAM@M[1,i])){
-      RAM@M[1,i] <- paste0("label(",RAM@M[1,i], ")")
+      RAM@M[1,i] <- paste0("label('",RAM@M[1,i], "')")
     }
 
   }
