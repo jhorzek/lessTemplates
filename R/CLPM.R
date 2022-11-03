@@ -503,6 +503,8 @@ CLPM <- function(model,
 #' @return integer; larges time lag
 #' @keywords internal
 .findMaxLag <- function(occasions){
+  if(all(occasions$string == "(u)"))
+    return(0)
   removed_u <- stringr::str_remove_all(string = occasions$string,
                                        pattern = "\\(u[-]*|\\)")
   removed_u <- removed_u[removed_u!=""]
