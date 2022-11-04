@@ -1,7 +1,7 @@
 #' CLPM
 #'
 #' Creates a cross-lagged panel model from a lavaan-like syntax. The syntax (model)
-#' can be fairly complicated to read; use the simplify - function to make it more
+#' can be fairly complicated to read; use the simplify() - function to make it more
 #' readable. However, we recommend passing the complex syntax to lavaan instead of
 #' the readable one to reduce the likelihood of errors.
 #'
