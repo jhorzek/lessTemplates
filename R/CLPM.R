@@ -15,11 +15,65 @@
 #' (variant). Set to "invariant" to add latent variances which are equal for all
 #' occasions (measurement invariant). Set to "no" to not add any latent variances (set to 0)
 #' @param meanstructure set to TRUE to add a mean structure
+#' @param silent set to TRUE to suppress messages
 #' @return list with (1) model -> a string with syntax to pass to lavaan as model,
 #' (2) data -> a data set in wide format to pass to lavaan, and (3) internal ->
 #' internal objects needed for other functions of lessTransformations.
 #'
 #' @examples
+#' # Example 1:
+#' # The following simulation and analysis of a random intercept cross-lagged panel model
+#' # is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
+#' # Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+#' # 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
+#' #
+#' # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
+#'
+#' library(lessTransformations)
+#' library(lavaan)
+#' library(lessSEM)
+#'
+#' # Simulate Data
+#' data <- simulateRICLPM()
+#'
+#' # Set up model
+#' model <- "
+#' # autoregressive and cross-lagged parameters:
+#' eta1_(u) ~ a11_(u)*eta1_(u-1) + a12_(u)*eta2_(u-1)
+#' eta2_(u) ~ a21_(u)*eta1_(u-1) + a22_(u)*eta2_(u-1)
+#'
+#' # covariances
+#' eta1_(u) ~~ 0*eta2_(u) + v11*eta1_(u)
+#' eta2_(u) ~~ v22*eta2_(u)
+#'
+#' # Add observations:
+#' eta1_(u) =~ 1*y1_(u)
+#' eta2_(u) =~ 1*y2_(u)
+#'
+#' y1_(u) ~~ 0*y1_(u)
+#' y2_(u) ~~ 0*y2_(u)
+#'
+#' # random intercepts
+#' RI_eta1 =~ 1*y1_(u)
+#' RI_eta2 =~ 1*y2_(u)
+#'
+#' RI_eta1 ~~ vri11*RI_eta1 + vri12*RI_eta2
+#' RI_eta2 ~~ vri22*RI_eta2
+#' "
+#'
+#' # create the lavaan syntax using lessTransformations:
+#' m <- lessTransformations::CLPM(model = model,
+#'                                data = data,
+#'                                addManifestVar = "no")
+#' # fit the model:
+#' fit <- sem(model = m$model,
+#'            data = m$data,
+#'            meanstructure = TRUE,
+#'            missing = "ml")
+#' # get the parameter estimates
+#' coef(fit)
+#'
+#' ## Example 2:
 #' # Simulation of a second order model:
 #' sim <- simulateExample1()
 #'
@@ -45,10 +99,14 @@ CLPM <- function(model,
                  data,
                  addManifestVar = "variant",
                  addLatentVar = "variant",
-                 meanstructure = FALSE){
+                 meanstructure = FALSE,
+                 silent = FALSE){
 
-  cat("\nSetting up a cross-lagged panel model.\n")
-  RAM <- lessTransformations:::.CLPM(model = model, data = data)
+  if(!silent)
+    cat("\nSetting up a cross-lagged panel model.\n")
+  RAM <- lessTransformations:::.CLPM(model = model,
+                                     data = data,
+                                     silent = silent)
 
   if(addManifestVar == "invariant"){
     manifestVar <- diag(RAM@S[RAM@manifest, RAM@manifest])
@@ -86,8 +144,10 @@ CLPM <- function(model,
     stop("Unknown addLatentVar. Possible are 'invariant', 'variant', or 'no'.")
   }
 
-  cat("Names of the latent variables:", RAM@latent, "\n")
-  cat("Names of the manifest variables:", RAM@manifest, "\n")
+  if(!silent)
+    cat("Names of the latent variables:", RAM@latent, "\n")
+  if(!silent)
+    cat("Names of the manifest variables:", RAM@manifest, "\n")
   lavaanSyntax <- lessTransformations:::.RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
   dataWide <- try(lessTransformations:::.toWide(data = data, RAM = RAM))
   if(is(object = dataWide, class2 = "try-error")){
@@ -96,7 +156,8 @@ CLPM <- function(model,
                 data = NULL))
   }
 
-  cat("Returning lavaan syntax and data in wide format\n")
+  if(!silent)
+    cat("Returning lavaan syntax and data in wide format\n")
 
   clpm <- list(model = lavaanSyntax,
                data = dataWide,
@@ -114,9 +175,12 @@ CLPM <- function(model,
 #' @param model string specifying the model syntax
 #' @param data longitudinal data in long format. Must have the columns "person"
 #' and "occasion"
+#' @param silent set to TRUE to suppress messages
 #' @return Model in RAM notation
 #' @keywords internal
-.CLPM <- function(model, data){
+.CLPM <- function(model,
+                  data,
+                  silent){
 
   if(!all(c("person", "occasion") %in% colnames(data)))
     stop("Could not find the columns person and occasion in the data set.")
@@ -153,7 +217,8 @@ CLPM <- function(model,
 
     if(!any(grepl(pattern = paste0(l, "=~|",l, "_\\(u\\)=~"),
                   x = syntax))){
-      cat(crayon::red("Note:"), paste0("Could not find a measurement model for ",l, ".\n"))
+      if(!silent)
+        cat(crayon::red("Note:"), paste0("Could not find a measurement model for ",l, ".\n"))
     }
 
   }

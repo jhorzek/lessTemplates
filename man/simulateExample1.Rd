@@ -4,7 +4,7 @@
 \alias{simulateExample1}
 \title{simulateExample1}
 \usage{
-simulateExample1()
+simulateExample1(seed = 123)
 }
 \value{
 list with data and model

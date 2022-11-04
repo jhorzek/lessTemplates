@@ -40,6 +40,59 @@ readable. However, we recommend passing the complex syntax to lavaan instead of
 the readable one to reduce the likelihood of errors.
 }
 \examples{
+# Example 1:
+# The following simulation and analysis of a random intercept cross-lagged panel model
+# is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
+# Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+# 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
+#
+# See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
+
+library(lessTransformations)
+library(lavaan)
+library(lessSEM)
+
+# Simulate Data
+data <- simulateRICLPM()
+
+# Set up model
+model <- "
+# autoregressive and cross-lagged parameters:
+eta1_(u) ~ a11_(u)*eta1_(u-1) + a12_(u)*eta2_(u-1)
+eta2_(u) ~ a21_(u)*eta1_(u-1) + a22_(u)*eta2_(u-1)
+
+# covariances
+eta1_(u) ~~ 0*eta2_(u) + v11*eta1_(u)
+eta2_(u) ~~ v22*eta2_(u)
+
+# Add observations:
+eta1_(u) =~ 1*y1_(u)
+eta2_(u) =~ 1*y2_(u)
+
+y1_(u) ~~ 0*y1_(u)
+y2_(u) ~~ 0*y2_(u)
+
+# random intercepts
+RI_eta1 =~ 1*y1_(u)
+RI_eta2 =~ 1*y2_(u)
+
+RI_eta1 ~~ vri11*RI_eta1 + vri12*RI_eta2
+RI_eta2 ~~ vri22*RI_eta2
+"
+
+# create the lavaan syntax using lessTransformations:
+m <- lessTransformations::CLPM(model = model,
+                               data = data,
+                               addManifestVar = "no")
+# fit the model:
+fit <- sem(model = m$model,
+           data = m$data,
+           meanstructure = TRUE,
+           missing = "ml")
+# get the parameter estimates
+coef(fit)
+
+## Example 2:
 # Simulation of a second order model:
 sim <- simulateExample1()
 
