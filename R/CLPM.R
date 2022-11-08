@@ -411,7 +411,7 @@ CLPM <- function(model,
 .getVariableNamesCLPM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[a-zA-Z0-9]+\\*|[a-zA-Z0-9]+_\\(u[\\-]*[0-9]*\\)\\*",
+  syntax_t <- gsub(pattern = "[a-zA-Z0-9]+\\*|[a-zA-Z0-9_]+_\\(u[\\-]*[0-9]*\\)\\*",
                    replacement = "",
                    x = syntax)
   # remove means
