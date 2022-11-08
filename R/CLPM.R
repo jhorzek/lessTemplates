@@ -542,9 +542,9 @@ CLPM <- function(model,
 #' @param maxLag larges lag in the equations
 #' @return updated M matrix
 #' @keywords internal
-.fillIntercepts <- function(M = M,
-                            latents = latents,
-                            maxLag = maxLag){
+.fillIntercepts <- function(M,
+                            latents,
+                            maxLag){
 
   latentNames <- paste0(latents$occasionDependent, "_u", rep(1:maxLag, each = length(latents$occasionDependent)))
 

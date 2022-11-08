@@ -46,7 +46,8 @@ CTSEM <- function(model,
 
   clpm <- lessTransformations::CLPM(model = arclModel$syntax,
                                     data = arclData[,colnames(arclData) != "time"],
-                                    silent = TRUE)
+                                    silent = TRUE,
+                                    meanstructure = grepl(pattern = "*1", x = arclModel$syntax))
 
   transformations <- lessTransformations:::.getCTSEMTransformations(arclModel = arclModel,
                                                                     dataCTSEM = dataCTSEM,
@@ -325,6 +326,7 @@ CTSEM <- function(model,
 
 .getCTSEMMatrices <- function(syntax, arclModel){
 
+  warning("Currently not using the specified drift and diffusion values but estimating all values of the first order model.")
   if(arclModel$highestOrder == 1){
     dependent <- paste0("d_", arclModel$dynamicLatents)
     predictor <- arclModel$dynamicLatents
@@ -350,7 +352,7 @@ CTSEM <- function(model,
                       ncol = length(predictor),
                       dimnames = list(predictor, predictor)
   )
-
+  # make symmetric
   for(i in 1:nrow(DIFFUSION)){
     for(j in i:nrow(DIFFUSION)){
       DIFFUSION[i,j] <- DIFFUSION[j,i]
@@ -504,9 +506,15 @@ CTSEM <- function(model,
       for(c1 in 1:nrow(cov_u)){
         for(c2 in 1:ncol(cov_u)){
           transformations <- c(transformations,
-                               paste0(cov_u[c1,c2], " = LVCOV_",
+                               paste0(cov_u[c1,c2], " = ",
+                                      # lessSEM internally uses the exponential of
+                                      # variance parameters to avoid negative variances.
+                                      # We therefore take the log in case of variances:
+                                      ifelse(c1==c2, "log(",""),
+                                      "LVCOV_",
                                       which(unique(dataCTSEM$timetable$timeInterval) == ti),
-                                      "(", c1-1, ",", c2-1, ")"
+                                      "(", c1-1, ",", c2-1, ")",
+                                      ifelse(c1==c2, ")","")
                                )
           )
         }
