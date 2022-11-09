@@ -41,6 +41,8 @@ CTSEM <- function(model,
                                                        latents = latents,
                                                        wiener = wiener)
 
+  if(any(arclModel$highestOrder != 1))
+    stop("Currently only first order models are implemented.")
   ctMatrices <- lessTransformations:::.getCTSEMMatrices(syntax = syntax,
                                                         arclModel = arclModel)
 
