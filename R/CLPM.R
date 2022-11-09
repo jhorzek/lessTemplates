@@ -195,7 +195,9 @@ CLPM <- function(model,
   syntax <- lessTransformations:::.makeSingleLine(syntax = syntax)
 
   # check for occasion specific statements
-  syntax <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
+  oocasionSpecific <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
+  syntax <- oocasionSpecific$syntax
+  isOccasionSpecific <- oocasionSpecific$isOccasionSpecific
 
   # find the names of all variables
   variableNames <- lessTransformations:::.getVariableNamesCLPM(syntax = syntax)
@@ -279,6 +281,7 @@ CLPM <- function(model,
     # adapt syntax for this specific occasion
     syntax_u <- syntax
     occasions_u <- occasions
+    isOccasionSpecific_u <- isOccasionSpecific
 
     for(i in 1:nrow(occasions)){
 
@@ -300,16 +303,21 @@ CLPM <- function(model,
     }
 
     # remove parts which now end in the operator
+    isOccasionSpecific_u <- isOccasionSpecific[!grepl(pattern = "[=~]$",
+                                                      x = syntax_u)]
     syntax_u <- syntax_u[!grepl(pattern = "[=~]$",
                                 x = syntax_u)]
 
-    for(i in 1:length(syntax_u)){
+    # we first iterate over all non-occasion specific elements,
+    # then over the occasion specific ones. This way we can make sure that
+    # the occasion specific ones override non-occasion specific elements
+    for(i in c(which(!isOccasionSpecific_u), which(isOccasionSpecific_u))){
       splitted <- lessTransformations:::.splitEquation(equation = syntax_u[i])
 
       if(all(splitted$operator == "=~")){
 
         for(j in 1:nrow(splitted)){
-          if(!A[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j]))
+          if(!A[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j]) & !isOccasionSpecific_u[i])
             stop("Redefinition of A[", splitted$rhs[j], ",", splitted$lhs[j], ".")
           A[splitted$rhs[j], splitted$lhs[j]] <- splitted$label[j]
         }
@@ -317,9 +325,9 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~~")){
 
         for(j in 1:nrow(splitted)){
-          if(!S[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j]))
+          if(!S[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j])  & !isOccasionSpecific_u[i])
             stop("Redefinition of S[", splitted$rhs[j], ",", splitted$lhs[j], ".")
-          if(!S[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j]))
+          if(!S[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j])  & !isOccasionSpecific_u[i])
             stop("Redefinition of S[", splitted$lhs[j], ",", splitted$rhs[j], ".")
           if(splitted$label[j] == "0")
             splitted$label[j] <- "0.0" # to protect the value from automatically defined variances
@@ -330,7 +338,7 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~" &  splitted$rhs == "1")){
 
         for(j in 1:nrow(splitted)){
-          if(!M[1,splitted$lhs[j]]  %in% c("0",splitted$label[j]))
+          if(!M[1,splitted$lhs[j]]  %in% c("0",splitted$label[j]) & !isOccasionSpecific_u[i])
             stop("Redefinition of M[1,", splitted$lhs[j], ".")
           M[1,splitted$lhs[j]] <- splitted$label[j]
         }
@@ -338,7 +346,7 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~")){
 
         for(j in 1:nrow(splitted)){
-          if(!A[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j]))
+          if(!A[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j]) & !isOccasionSpecific_u[i])
             stop("Redefinition of A[", splitted$lhs[j], ",", splitted$rhs[j], ".")
           A[splitted$lhs[j], splitted$rhs[j]] <- splitted$label[j]
         }
@@ -586,8 +594,9 @@ CLPM <- function(model,
 
 .replaceOccasionSpecific <- function(syntax){
 
-  if(!any(grepl(pattern = "\\([0-9]+\\)",
-                x = syntax)))
+  isOccasionSpecific <- grepl(pattern = "\\([0-9]+\\)",
+                              x = syntax)
+  if(!any(isOccasionSpecific))
     return(syntax)
 
   occasionSpecific <- unique(unlist(stringr::str_extract_all(pattern = "\\([0-9]+\\)",
@@ -603,6 +612,7 @@ CLPM <- function(model,
                                        pattern = paste0("\\(",occasionSpecific_u[i], "\\)"),
                                        replacement = paste0("u",occasionSpecific_u[i]))
   }
-  return(syntax)
+  return(list(isOccasionSpecific = isOccasionSpecific,
+              syntax = syntax))
 
 }
