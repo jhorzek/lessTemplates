@@ -9,7 +9,8 @@ CLPM(
   data,
   addManifestVar = "variant",
   addLatentVar = "variant",
-  meanstructure = FALSE
+  meanstructure = FALSE,
+  silent = FALSE
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ occasions (measurement invariant). Set to "no" to not add any manifest variances
 occasions (measurement invariant). Set to "no" to not add any latent variances (set to 0)}
 
 \item{meanstructure}{set to TRUE to add a mean structure}
+
+\item{silent}{set to TRUE to suppress messages}
 }
 \value{
 list with (1) model -> a string with syntax to pass to lavaan as model,
@@ -35,7 +38,7 @@ internal objects needed for other functions of lessTransformations.
 }
 \description{
 Creates a cross-lagged panel model from a lavaan-like syntax. The syntax (model)
-can be fairly complicated to read; use the simplify - function to make it more
+can be fairly complicated to read; use the simplify() - function to make it more
 readable. However, we recommend passing the complex syntax to lavaan instead of
 the readable one to reduce the likelihood of errors.
 }

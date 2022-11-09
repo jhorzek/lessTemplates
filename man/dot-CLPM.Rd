@@ -4,13 +4,15 @@
 \alias{.CLPM}
 \title{.CLPM}
 \usage{
-.CLPM(model, data)
+.CLPM(model, data, silent)
 }
 \arguments{
 \item{model}{string specifying the model syntax}
 
 \item{data}{longitudinal data in long format. Must have the columns "person"
 and "occasion"}
+
+\item{silent}{set to TRUE to suppress messages}
 }
 \value{
 Model in RAM notation

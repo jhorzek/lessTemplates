@@ -1,3 +1,108 @@
+#' CTSEM
+#'
+#' Set up a continuous time structural equation model with lessSEM
+#'
+#' @param model syntax to specify the model
+#' @param data data set in long format with person and time for each observation
+#' @examples
+#' library(ctsemOMX)
+#' library(lessTransformations)
+#' library(lessSEM)
+#' library(lavaan)
+#'
+#' data(AnomAuth)
+#' data <- ctWideToLong(datawide = AnomAuth,
+#'                      Tpoints= 5,
+#'                      n.manifest=2,
+#'                      manifestNames = c("Y1", "Y2"))
+#'
+#' # Then convert the time intervals to absolute time
+#' data <- ctDeintervalise(datalong = data, id='id', dT='dT')
+#' colnames(data) <- c("person", "time", "Y1", "Y2")
+#' data <- as.data.frame(data)
+#' data <- data[!(is.na(data$Y1) & is.na(data$Y2)),]
+#'
+#' model <- "
+#' d_eta1(t) ~ eta1(t) + eta2(t)
+#' d_eta2(t) ~ eta1(t) + eta2(t)
+#'
+#' d_eta1(t) ~~ d_eta1(t) + d_eta2(t)
+#' d_eta2(t) ~~ d_eta2(t)
+#'
+#' eta1(t) =~ 1*Y1(t)
+#' eta2(t) =~ 1*Y2(t)
+#'
+#' Y1(t) ~~ 0*Y1(t)
+#' Y2(t) ~~ 0*Y2(t)
+#'
+#' Y1(t) ~ m1*1
+#' Y2(t) ~ m2*1
+#'
+#' eta1(0) ~ 1
+#' eta2(0) ~ 1
+#' "
+#'
+#' ctsem <- lessTransformations::CTSEM(model = model,
+#'                                     data = data)
+#'
+#' fit_lavaan <- sem(model = ctsem$model,
+#'                   data = ctsem$data,
+#'                   do.fit = FALSE,
+#'                   missing = "ml",
+#'                   meanstructure = TRUE)
+#'
+#' ctfit <- lessSEM::bfgs(lavaanModel = fit_lavaan,
+#'                        modifyModel = modifyModel(transformations = ctsem$transformation))
+#'
+#' ctfit@parameters[,sort(ctfit@parameterLabels)]
+#'
+#' # comparison
+#' AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
+#'                          Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
+#' AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = T)
+#' summary(AnomAuthfit)
+#'
+#' # adding a random intercept
+#' model <- "
+#' d_eta1(t) ~ eta1(t) + eta2(t)
+#' d_eta2(t) ~ eta1(t) + eta2(t)
+#'
+#' d_eta1(t) ~~ d_eta1(t) + d_eta2(t)
+#' d_eta2(t) ~~ d_eta2(t)
+#'
+#' eta1(t) =~ 1*Y1(t)
+#' eta2(t) =~ 1*Y2(t)
+#'
+#' Y1(t) ~~ 0*Y1(t)
+#' Y2(t) ~~ 0*Y2(t)
+#'
+#' Y1(t) ~ m1*1
+#' Y2(t) ~ m2*1
+#'
+#' eta1(0) ~ 1
+#' eta2(0) ~ 1
+#'
+#' RIY1 =~ 1*Y1(t)
+#' RIY2 =~ 1*Y2(t)
+#' RIY1 ~~ RIY1 + RIY2
+#' RIY2 ~~ RIY2
+#' RIY1 ~1
+#' RIY2 ~1
+#' "
+#'
+#' ctsem <- lessTransformations::CTSEM(model = model,
+#'                                     data = data)
+#'
+#' fit_lavaan <- sem(model = ctsem$model,
+#'                   data = ctsem$data,
+#'                   do.fit = FALSE,
+#'                   missing = "ml",
+#'                   meanstructure = TRUE)
+#'
+#' ctfit <- lessSEM::bfgs(lavaanModel = fit_lavaan,
+#'                        modifyModel = modifyModel(transformations = ctsem$transformation))
+#' ctfit@parameters[,sort(ctfit@parameterLabels)]
+#' @export
 CTSEM <- function(model,
                   data){
 

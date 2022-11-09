@@ -4,14 +4,14 @@
 \alias{.fillIntercepts}
 \title{.fillIntercepts}
 \usage{
-.fillIntercepts(M = M, latents = latents, maxLag = maxLag)
+.fillIntercepts(M, latents, maxLag)
 }
 \arguments{
 \item{M}{M matrix with means and intercepts}
 
 \item{latents}{data.frame with names of latent variables}
 
-\item{maxLag}{larges lag in the equations}
+\item{maxLag}{largest lag in the equations}
 }
 \value{
 updated M matrix
