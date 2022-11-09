@@ -194,6 +194,9 @@ CLPM <- function(model,
   syntax <- lessTransformations:::.removeWhitespace(syntax = syntax)
   syntax <- lessTransformations:::.makeSingleLine(syntax = syntax)
 
+  # check for occasion specific statements
+  syntax <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
+
   # find the names of all variables
   variableNames <- lessTransformations:::.getVariableNamesCLPM(syntax = syntax)
 
@@ -306,7 +309,7 @@ CLPM <- function(model,
       if(all(splitted$operator == "=~")){
 
         for(j in 1:nrow(splitted)){
-          if(A[splitted$rhs[j], splitted$lhs[j]]!="0")
+          if(!A[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j]))
             stop("Redefinition of A[", splitted$rhs[j], ",", splitted$lhs[j], ".")
           A[splitted$rhs[j], splitted$lhs[j]] <- splitted$label[j]
         }
@@ -314,9 +317,9 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~~")){
 
         for(j in 1:nrow(splitted)){
-          if((S[splitted$rhs[j], splitted$lhs[j]]!="0") & (S[splitted$rhs[j], splitted$lhs[j]]!=splitted$label[j]))
+          if(!S[splitted$rhs[j], splitted$lhs[j]] %in% c("0",splitted$label[j]))
             stop("Redefinition of S[", splitted$rhs[j], ",", splitted$lhs[j], ".")
-          if((S[splitted$lhs[j], splitted$rhs[j]]!="0") & (S[splitted$lhs[j], splitted$rhs[j]]!=splitted$label[j]))
+          if(!S[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j]))
             stop("Redefinition of S[", splitted$lhs[j], ",", splitted$rhs[j], ".")
           if(splitted$label[j] == "0")
             splitted$label[j] <- "0.0" # to protect the value from automatically defined variances
@@ -327,7 +330,7 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~" &  splitted$rhs == "1")){
 
         for(j in 1:nrow(splitted)){
-          if(M[1,splitted$lhs[j]]!="0")
+          if(!M[1,splitted$lhs[j]]  %in% c("0",splitted$label[j]))
             stop("Redefinition of M[1,", splitted$lhs[j], ".")
           M[1,splitted$lhs[j]] <- splitted$label[j]
         }
@@ -335,7 +338,7 @@ CLPM <- function(model,
       }else if(all(splitted$operator == "~")){
 
         for(j in 1:nrow(splitted)){
-          if(A[splitted$lhs[j], splitted$rhs[j]]!="0")
+          if(!A[splitted$lhs[j], splitted$rhs[j]]  %in% c("0",splitted$label[j]))
             stop("Redefinition of A[", splitted$lhs[j], ",", splitted$rhs[j], ".")
           A[splitted$lhs[j], splitted$rhs[j]] <- splitted$label[j]
         }
@@ -424,8 +427,13 @@ CLPM <- function(model,
 
   # remove time indices
   isOccasionDependent <- grepl(pattern = "_\\(u[\\-]*[0-9]*\\)",
-                               x = variableNames)
+                               x = variableNames) |
+    grepl(pattern = "_u[0-9]+",
+          x = variableNames)
   variableNames <- gsub(pattern = "_\\(u[\\-]*[0-9]*\\)",
+                        replacement = "",
+                        x = variableNames)
+  variableNames <- gsub(pattern = "_u[0-9]+",
                         replacement = "",
                         x = variableNames)
   names(isOccasionDependent) <- variableNames
@@ -539,7 +547,7 @@ CLPM <- function(model,
 #' fills the intercepts for latent variables which are considered initial intercepts
 #' @param M M matrix with means and intercepts
 #' @param latents data.frame with names of latent variables
-#' @param maxLag larges lag in the equations
+#' @param maxLag largest lag in the equations
 #' @return updated M matrix
 #' @keywords internal
 .fillIntercepts <- function(M,
@@ -574,4 +582,27 @@ CLPM <- function(model,
                                        pattern = "\\(u[-]*|\\)")
   removed_u <- removed_u[removed_u!=""]
   return(max(as.numeric(removed_u)))
+}
+
+.replaceOccasionSpecific <- function(syntax){
+
+  if(!any(grepl(pattern = "\\([0-9]+\\)",
+                x = syntax)))
+    return(syntax)
+
+  occasionSpecific <- unique(unlist(stringr::str_extract_all(pattern = "\\([0-9]+\\)",
+                                                             string = syntax)))
+  # replace with u1...
+  occasionSpecific_u <- stringr::str_remove_all(string = occasionSpecific,
+                                                pattern = "\\(")
+  occasionSpecific_u <- stringr::str_remove_all(string = occasionSpecific_u,
+                                                pattern = "\\)")
+
+  for(i in 1:length(occasionSpecific_u)){
+    syntax <- stringr::str_replace_all(string = syntax,
+                                       pattern = paste0("\\(",occasionSpecific_u[i], "\\)"),
+                                       replacement = paste0("u",occasionSpecific_u[i]))
+  }
+  return(syntax)
+
 }

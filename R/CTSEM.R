@@ -20,9 +20,6 @@ CTSEM <- function(model,
   # check if all dynamics are time dependent
   lessTransformations:::.checkDynamics(syntax = syntax)
 
-  # find statements regarding Wiener process
-  wiener <- lessTransformations:::.getWienerProcessCTSEM(syntax)
-
   # find the names of all variables
   variableNames <- lessTransformations:::.getVariableNamesCTSEM(syntax = syntax)
 
@@ -39,10 +36,8 @@ CTSEM <- function(model,
   # set up discrete time model as basis
   arclModel <- lessTransformations:::.getDiscreteBasis(syntax = syntax,
                                                        latents = latents,
-                                                       wiener = wiener)
+                                                       manifests = manifests)
 
-  if(any(arclModel$highestOrder != 1))
-    stop("Currently only first order models are implemented.")
   ctMatrices <- lessTransformations:::.getCTSEMMatrices(syntax = syntax,
                                                         arclModel = arclModel)
 
@@ -87,18 +82,6 @@ CTSEM <- function(model,
 
 }
 
-
-.getWienerProcessCTSEM <- function(syntax){
-
-  wiener <- unlist(stringr::str_extract_all(string = syntax,
-                                            pattern = "d[0-9]*_W[0-9]*\\(t\\)"))
-  if(length(wiener) == 0)
-    stop("Could not find a statement regarding the wiener process (e.g., d_W1(t)).")
-
-  return(wiener)
-}
-
-
 #' .getVariableNamesCLPM
 #'
 #' extracts the names of the variables from the syntax
@@ -108,7 +91,7 @@ CTSEM <- function(model,
 .getVariableNamesCTSEM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[a-zA-Z0-9_]+\\*",
+  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_]+\\*",
                    replacement = "",
                    x = syntax)
   # remove means
@@ -118,9 +101,6 @@ CTSEM <- function(model,
   # split at operators
   variableNames <- unlist(stringr::str_split(string = syntax_t,
                                              pattern = "\\+|=~|~~|~"))
-  # remove Wiener process
-  variableNames <- variableNames[!grepl(pattern = "d[0-9]*_W[0-9]*\\(t\\)",
-                                        x = variableNames)]
   # remove time indices
   isTimeDependent <- grepl(pattern = "\\(t\\)",
                            x = variableNames)
@@ -135,7 +115,7 @@ CTSEM <- function(model,
   )
 }
 
-.getDiscreteBasis <- function(syntax, latents, wiener){
+.getDiscreteBasis <- function(syntax, latents, manifests){
 
   # keep all measurement equations
   measurementEquations <- syntax[grepl(pattern = "=~", x = syntax)]
@@ -145,24 +125,14 @@ CTSEM <- function(model,
                                                    pattern = "\\(t\\)",
                                                    replacement = "_\\(u\\)")
 
-  # find the highest order:
-  highestOrder <- max(lessTransformations:::.getHighestOrderCTSEM(latents = latents,
-                                                                  wiener = wiener))
-
   dynamicLatents <- latents$occasionDependent
 
   # remove all differential statements
   dynamicLatents <- unique(stringr::str_remove(string = dynamicLatents,
-                                               pattern = "^d[0-9]*_"))
+                                               pattern = "^d_"))
 
   # create names used in arcl model for dynamics:
-  if(highestOrder == 1){
-    arclDynamics <- dynamicLatents
-  }else{
-    arclDynamics <- c(dynamicLatents,
-                      paste0("d",1:(highestOrder-1), "_", dynamicLatents)
-    )
-  }
+  arclDynamics <- dynamicLatents
 
   arcls <- matrix(paste0("arcl_",
                          rep(1:length(arclDynamics), length(arclDynamics)),
@@ -246,8 +216,12 @@ CTSEM <- function(model,
   arclSyntax <- paste0(arclSyntax,
                        collapse = "\n")
 
-  # add remaining covariances
-  measurementCovs <- syntax[grepl(pattern = "~~", x = syntax)]
+  # add remaining manifest covariances
+  measurementCovs <- syntax[grepl(pattern = "~~",
+                                  x = syntax) &
+                              !grepl(pattern = paste0(paste0("^", latents$occasionDependent), collapse = "|"),
+                                     x = syntax)
+  ] # remove latent dynamic covs; these are captured in the diffusion
 
   # replace dynamics in measurement equations
   measurementCovs <- stringr::str_replace_all(string = measurementCovs,
@@ -258,49 +232,38 @@ CTSEM <- function(model,
                   measurementCovs)
 
   # add manifest intercepts
-  measurementInts <- syntax[grepl(pattern = "\\*1", x = syntax)]
+  intercepts <- grepl(pattern = "[\\*]*1$", x = syntax) &
+    grepl(pattern = "~", x = syntax) &
+    !grepl(pattern = "~~", x = syntax)
+
+  measurementInts <- syntax[intercepts &
+                              !grepl(pattern = paste0(paste0("^", latents$occasionDependent), collapse = "|"),
+                                     x = syntax)]
   measurementInts <- stringr::str_replace_all(string = measurementInts,
                                               pattern = "\\(t\\)",
                                               replacement = "_\\(u\\)")
   arclSyntax <- c(arclSyntax,
                   measurementInts)
 
+  # check for initial means of latent variables
+  initialMeans <- syntax[intercepts &
+                           grepl(pattern = paste0(paste0("^", latents$occasionDependent, "\\(0\\)"), collapse = "|"),
+                                 x = syntax)]
+  initialMeans <- stringr::str_replace_all(string = initialMeans,
+                                           pattern = "\\(0\\)",
+                                           replacement = "_\\(1\\)")
+  arclSyntax <- c(arclSyntax,
+                  initialMeans)
+
+  # combine
   arclSyntax <- paste0(arclSyntax,
                        collapse = "\n")
 
   return(list(syntax = arclSyntax,
               arcl = arcls,
               covs = covs,
-              dynamicLatents = dynamicLatents,
-              highestOrder = highestOrder
+              dynamicLatents = dynamicLatents
   ))
-}
-
-.getHighestOrderCTSEM <- function(latents, wiener){
-  ordersDynamics <- stringr::str_extract(string = c(latents$occasionDependent),
-                                         pattern = "^d[0-9]*")
-  ordersWiener <- stringr::str_extract(string = c(wiener),
-                                       pattern = "^d[0-9]*")
-  if(all(c(is.na(ordersDynamics), is.na(ordersWiener))))
-    stop("Could not find any dynamics (e.g., statements using d_eta(t)).")
-  ordersDynamics <- ordersDynamics[!is.na(ordersDynamics)]
-  ordersWiener <- ordersWiener[!is.na(ordersWiener)]
-
-  getOrder <- function(orders){
-    if(all(orders == "d")){
-      highestOrder <- 1
-    }else{
-      orders <- orders[orders!="d"]
-      highestOrder <- max(as.integer(stringr::str_extract(string = orders,
-                                                          pattern = "[0-9]+$")))
-    }
-    return(highestOrder)
-  }
-
-  highestOrders <- c("dynamics" = getOrder(ordersDynamics),
-                     "wiener" = getOrder(ordersWiener))
-
-  return(highestOrders)
 }
 
 .prepareDataCTSEM <- function(data){
@@ -328,51 +291,71 @@ CTSEM <- function(model,
 
 .getCTSEMMatrices <- function(syntax, arclModel){
 
-  warning("Currently not using the specified drift and diffusion values but estimating all values of the first order model.")
-  if(arclModel$highestOrder == 1){
-    dependent <- paste0("d_", arclModel$dynamicLatents)
-    predictor <- arclModel$dynamicLatents
-  }else{
-    dependent <- paste0(rep(c("d", paste0("d",2:arclModel$highestOrder)), each = length(arclModel$dynamicLatents)),
-                        "_",
-                        rep(arclModel$dynamicLatents, arclModel$highestOrder))
-    predictor <- paste0(rep(c("", paste0("d",1:(arclModel$highestOrder-1))), each = length(arclModel$dynamicLatents)),
-                        "_",
-                        rep(arclModel$dynamicLatents, arclModel$highestOrder))
-  }
+  dependent <- paste0("d_", arclModel$dynamicLatents)
+  predictor <- arclModel$dynamicLatents
 
   # Set up the matrices; the individual values will be replaced later on
-  DRIFT <- matrix(paste0("drift_", rep(dependent, length(predictor)), "_", rep(predictor, each = length(predictor))),
+  DRIFT <- matrix("0.0",
                   nrow = length(predictor),
                   ncol = length(predictor),
                   dimnames = list(dependent, predictor)
   )
 
-  DIFFUSION <- matrix(paste0("diffusion_", rep(predictor, length(predictor)),
-                             "_", rep(predictor, each = length(predictor))),
-                      nrow = length(predictor),
-                      ncol = length(predictor),
-                      dimnames = list(predictor, predictor)
-  )
-  # make symmetric
-  for(i in 1:nrow(DIFFUSION)){
-    for(j in i:nrow(DIFFUSION)){
-      DIFFUSION[i,j] <- DIFFUSION[j,i]
+  for(i in 1:nrow(DRIFT)){
+    predicted_in <- grepl(pattern = paste0("^", rownames(DRIFT)[i], "\\(t\\)~[0-9a-zA-Z]+"), x = syntax)
+    if(!any(predicted_in)) next
+
+    rhs <- stringr::str_remove(syntax[predicted_in],
+                               paste0("^", rownames(DRIFT)[i], "\\(t\\)~"))
+
+    for(j in 1:ncol(DRIFT)){
+      # check if variable j predicts the change in i:
+      if(grepl(pattern = paste0(colnames(DRIFT)[j], "\\(t\\)"), x = rhs)){
+        element <- stringr::str_extract(string = rhs,
+                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(DRIFT)[j], "\\(t\\)"))
+        if(grepl(pattern = "\\*", x = element)){
+          DRIFT[i,j] <- stringr::str_extract(string = element,
+                                             pattern = "^[.0-9a-zA-Z]")
+        }else{
+          DRIFT[i,j] <- paste0("drift_",rownames(DRIFT)[i],"_", colnames(DRIFT)[j])
+        }
+      }
     }
   }
 
-  if(arclModel$highestOrder == 1){
+  DIFFUSION <- matrix("0.0",
+                      nrow = length(dependent),
+                      ncol = length(dependent),
+                      dimnames = list(dependent, dependent)
+  )
 
-    return(
-      list(DRIFT = DRIFT,
-           DIFFUSION = DIFFUSION)
-    )
+  for(i in 1:nrow(DIFFUSION)){
+    predicted_in <- grepl(pattern = paste0("^", rownames(DIFFUSION)[i], "\\(t\\)~~[0-9a-zA-Z]+"), x = syntax)
+    if(!any(predicted_in)) next
 
-  }else{
+    rhs <- stringr::str_remove(syntax[predicted_in],
+                               paste0("^", rownames(DIFFUSION)[i], "\\(t\\)~~"))
 
-    stop("Higher order models not yet implemented")
-
+    for(j in 1:ncol(DIFFUSION)){
+      # check if variable j predicts the change in i:
+      if(grepl(pattern = paste0(colnames(DIFFUSION)[j], "\\(t\\)"), x = rhs)){
+        element <- stringr::str_extract(string = rhs,
+                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(DIFFUSION)[j], "\\(t\\)"))
+        if(grepl(pattern = "\\*", x = element)){
+          DIFFUSION[i,j] <- stringr::str_extract(string = element,
+                                                 pattern = "^[.0-9a-zA-Z]")
+        }else{
+          DIFFUSION[i,j] <- paste0("diffusion_",rownames(DIFFUSION)[i],"_", colnames(DIFFUSION)[j])
+        }
+        DIFFUSION[j,i] <- DIFFUSION[i,j]
+      }
+    }
   }
+
+  return(
+    list(DRIFT = DRIFT,
+         DIFFUSION = DIFFUSION)
+  )
 }
 
 .getCTSEMTransformations <- function(arclModel, dataCTSEM, ctMatrices){
