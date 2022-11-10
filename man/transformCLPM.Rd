@@ -88,7 +88,7 @@ lf <- lasso(lavaanModel = fit,
 # let's plot the regularized parameters:
 plot(lf)
 # In the best model, all regularized parameters have been set to zero:
-coef(lf, criterion = "AIC")
+coef(lf, criterion = "BIC")
 # We can conclude that the lasso regularization suggests invariance of the
 # autoregressive and cross-lagged parameters
 }

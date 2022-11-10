@@ -195,9 +195,9 @@ CLPM <- function(model,
   syntax <- lessTransformations:::.makeSingleLine(syntax = syntax)
 
   # check for occasion specific statements
-  oocasionSpecific <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
-  syntax <- oocasionSpecific$syntax
-  isOccasionSpecific <- oocasionSpecific$isOccasionSpecific
+  ocasionSpecific <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
+  syntax <- ocasionSpecific$syntax
+  isOccasionSpecific <- ocasionSpecific$isOccasionSpecific
 
   # find the names of all variables
   variableNames <- lessTransformations:::.getVariableNamesCLPM(syntax = syntax)
@@ -597,7 +597,8 @@ CLPM <- function(model,
   isOccasionSpecific <- grepl(pattern = "\\([0-9]+\\)",
                               x = syntax)
   if(!any(isOccasionSpecific))
-    return(syntax)
+    return(list(isOccasionSpecific = isOccasionSpecific,
+                syntax = syntax))
 
   occasionSpecific <- unique(unlist(stringr::str_extract_all(pattern = "\\([0-9]+\\)",
                                                              string = syntax)))
