@@ -105,8 +105,8 @@ CLPM <- function(model,
   if(!silent)
     cat("\nSetting up a cross-lagged panel model.\n")
   RAM <- lessTemplates:::.CLPM(model = model,
-                                     data = data,
-                                     silent = silent)
+                               data = data,
+                               silent = silent)
 
   if(addManifestVar == "invariant"){
     manifestVar <- diag(RAM@S[RAM@manifest, RAM@manifest])
@@ -312,6 +312,13 @@ CLPM <- function(model,
     # then over the occasion specific ones. This way we can make sure that
     # the occasion specific ones override non-occasion specific elements
     for(i in c(which(!isOccasionSpecific_u), which(isOccasionSpecific_u))){
+      if(isOccasionSpecific_u[i]){
+        # skip if it does not concern the current occasion
+        if(!(grepl(pattern = paste0("_u",u, "=~"), x = syntax_u[i]) |
+            grepl(pattern = paste0("_u",u, "~"), x = syntax_u[i]))) next
+
+      }
+
       splitted <- lessTemplates:::.splitEquation(equation = syntax_u[i])
 
       if(all(splitted$operator == "=~")){
@@ -422,7 +429,7 @@ CLPM <- function(model,
 .getVariableNamesCLPM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[a-zA-Z0-9]+\\*|[a-zA-Z0-9_]+_\\(u[\\-]*[0-9]*\\)\\*",
+  syntax_t <- gsub(pattern = "[a-zA-Z0-9_]+\\*|[a-zA-Z0-9_]+_\\(u[\\-]*[0-9]*\\)\\*",
                    replacement = "",
                    x = syntax)
   # remove means

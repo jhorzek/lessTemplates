@@ -14,8 +14,11 @@ Depends: dplyr
 Imports: tidyr, stringr, lessSEM, crayon
 RoxygenNote: 7.2.1
 Suggests: 
-    mvtnorm, 
+    mvtnorm,
     lavaan,
     stringr,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
 Config/testthat/edition: 3
+VignetteBuilder: knitr
