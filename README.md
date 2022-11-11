@@ -1,0 +1,101 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# lessTemplates
+
+The objective of lessTemplates is to provide a simplified implementation
+for some common models which can be used in lessSEM. Currently included
+are
+
+1.  cross-lagged panel models (with random intercepts)
+2.  continuous time structural equation models
+
+Additionally, lessSEM also provides some transformations for these
+models which allow for regularizing specific model structures (e.g., to
+test measurement invariance in cross-lagged panel models).
+
+## Installation
+
+You can install the development version of lessTemplates from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("jhorzek/lessTemplates")
+```
+
+## Example
+
+``` r
+# The following simulation and analysis of a random intercept cross-lagged panel model
+# is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
+# Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+# 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
+#
+# See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
+set.seed(123)
+
+library(lessTemplates)
+library(lavaan)
+library(lessSEM)
+
+# Simulate Data
+data <- simulateRICLPM(seed = 123)
+
+# Set up model
+model <- "
+# autoregressive and cross-lagged parameters:
+eta1_(u) ~ a11_(u)*eta1_(u-1) + a12_(u)*eta2_(u-1)
+eta2_(u) ~ a21_(u)*eta1_(u-1) + a22_(u)*eta2_(u-1)
+
+# covariances
+eta1_(u) ~~ 0*eta2_(u) + v11*eta1_(u)
+eta2_(u) ~~ v22*eta2_(u)
+
+# Add observations:
+eta1_(u) =~ 1*y1_(u)
+eta2_(u) =~ 1*y2_(u)
+
+y1_(u) ~~ 0*y1_(u)
+y2_(u) ~~ 0*y2_(u)
+
+# random intercepts
+RI_eta1 =~ 1*y1_(u)
+RI_eta2 =~ 1*y2_(u)
+
+RI_eta1 ~~ vri11*RI_eta1 + vri12*RI_eta2
+RI_eta2 ~~ vri22*RI_eta2
+"
+
+# create the lavaan syntax using lessTemplates:
+m <- lessTemplates::CLPM(model = model,
+                         data = data,
+                         addManifestVar = "no")
+# fit the model:
+fit <- sem(model = m$model,
+           data = m$data,
+           meanstructure = TRUE,
+           missing = "ml")
+# get the parameter estimates
+coef(fit)
+
+# In the simulation, we assumed that the autoregressive and cross-lagged parameters
+# all stay the same over time (e.g, a11_u1 = a11_u2 = a11_u3 = a11_u4 = a11_u5).
+# In practice, however, we won't know that. In the following, we will test this
+# automatically
+transform <- lessTemplates::transformCLPM(CLPM = m,
+                                          parameters = c("a11_(u)", "a12_(u)", "a21_(u)", "a22_(u)"),
+                                          # check measurement invariance of these parameters:
+                                          transformation = "measurementInvariance")
+# fit using lasso regularization:
+lf <- lasso(lavaanModel = fit,
+            regularized = transform$regularized,
+            nLambdas = 50,
+            modifyModel = modifyModel(transformations = transform$transformation))
+# let's plot the regularized parameters:
+plot(lf)
+# In the best model, all regularized parameters have been set to zero:
+coef(lf, criterion = "BIC")
+# We can conclude that the lasso regularization suggests invariance of the
+# autoregressive and cross-lagged parameters
+```
