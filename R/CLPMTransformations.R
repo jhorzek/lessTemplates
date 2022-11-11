@@ -14,7 +14,7 @@
 #' #
 #' # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
 #'
-#' library(lessTransformations)
+#' library(lessTemplates)
 #' library(lavaan)
 #' library(lessSEM)
 #'
@@ -46,8 +46,8 @@
 #' RI_eta2 ~~ vri22*RI_eta2
 #' "
 #'
-#' # create the lavaan syntax using lessTransformations:
-#' m <- lessTransformations::CLPM(model = model,
+#' # create the lavaan syntax using lessTemplates:
+#' m <- lessTemplates::CLPM(model = model,
 #'                                data = data,
 #'                                addManifestVar = "no")
 #' # fit the model:
@@ -62,7 +62,7 @@
 #' # all stay the same over time (e.g, a11_u1 = a11_u2 = a11_u3 = a11_u4 = a11_u5).
 #' # In practice, however, we won't know that. In the following, we will test this
 #' # automatically
-#' transform <- lessTransformations::transformCLPM(CLPM = m,
+#' transform <- lessTemplates::transformCLPM(CLPM = m,
 #'                                                 parameters = c("a11_(u)", "a12_(u)", "a21_(u)", "a22_(u)"),
 #'                                                 # check measurement invariance of these parameters:
 #'                                                 transformation = "measurementInvariance")

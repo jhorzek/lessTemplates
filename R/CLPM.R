@@ -18,7 +18,7 @@
 #' @param silent set to TRUE to suppress messages
 #' @return list with (1) model -> a string with syntax to pass to lavaan as model,
 #' (2) data -> a data set in wide format to pass to lavaan, and (3) internal ->
-#' internal objects needed for other functions of lessTransformations.
+#' internal objects needed for other functions of lessTemplates.
 #'
 #' @examples
 #' # Example 1:
@@ -29,7 +29,7 @@
 #' #
 #' # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
 #'
-#' library(lessTransformations)
+#' library(lessTemplates)
 #' library(lavaan)
 #' library(lessSEM)
 #'
@@ -61,8 +61,8 @@
 #' RI_eta2 ~~ vri22*RI_eta2
 #' "
 #'
-#' # create the lavaan syntax using lessTransformations:
-#' m <- lessTransformations::CLPM(model = model,
+#' # create the lavaan syntax using lessTemplates:
+#' m <- lessTemplates::CLPM(model = model,
 #'                                data = data,
 #'                                addManifestVar = "no")
 #' # fit the model:
@@ -104,7 +104,7 @@ CLPM <- function(model,
 
   if(!silent)
     cat("\nSetting up a cross-lagged panel model.\n")
-  RAM <- lessTransformations:::.CLPM(model = model,
+  RAM <- lessTemplates:::.CLPM(model = model,
                                      data = data,
                                      silent = silent)
 
@@ -148,8 +148,8 @@ CLPM <- function(model,
     cat("Names of the latent variables:", RAM@latent, "\n")
   if(!silent)
     cat("Names of the manifest variables:", RAM@manifest, "\n")
-  lavaanSyntax <- lessTransformations:::.RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
-  dataWide <- try(lessTransformations:::.toWide(data = data, RAM = RAM))
+  lavaanSyntax <- lessTemplates:::.RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
+  dataWide <- try(lessTemplates:::.toWide(data = data, RAM = RAM))
   if(is(object = dataWide, class2 = "try-error")){
     warning("Could not transform your data set from long to wide. Returning only the model")
     return(list(model = lavaanSyntax,
@@ -191,16 +191,16 @@ CLPM <- function(model,
 
   # remove unnecessary white space
   syntax <- lessSEM:::.reduceSyntax(syntax = model)
-  syntax <- lessTransformations:::.removeWhitespace(syntax = syntax)
-  syntax <- lessTransformations:::.makeSingleLine(syntax = syntax)
+  syntax <- lessTemplates:::.removeWhitespace(syntax = syntax)
+  syntax <- lessTemplates:::.makeSingleLine(syntax = syntax)
 
   # check for occasion specific statements
-  ocasionSpecific <- lessTransformations:::.replaceOccasionSpecific(syntax = syntax)
+  ocasionSpecific <- lessTemplates:::.replaceOccasionSpecific(syntax = syntax)
   syntax <- ocasionSpecific$syntax
   isOccasionSpecific <- ocasionSpecific$isOccasionSpecific
 
   # find the names of all variables
-  variableNames <- lessTransformations:::.getVariableNamesCLPM(syntax = syntax)
+  variableNames <- lessTemplates:::.getVariableNamesCLPM(syntax = syntax)
 
   latents <- list(
     occasionDependent = variableNames$occasionDependent[!variableNames$occasionDependent %in% colnames(data)],
@@ -312,7 +312,7 @@ CLPM <- function(model,
     # then over the occasion specific ones. This way we can make sure that
     # the occasion specific ones override non-occasion specific elements
     for(i in c(which(!isOccasionSpecific_u), which(isOccasionSpecific_u))){
-      splitted <- lessTransformations:::.splitEquation(equation = syntax_u[i])
+      splitted <- lessTemplates:::.splitEquation(equation = syntax_u[i])
 
       if(all(splitted$operator == "=~")){
 
@@ -362,7 +362,7 @@ CLPM <- function(model,
   }
 
   # fill covariances of initial time points
-  maxLag <- lessTransformations:::.findMaxLag(occasions = occasions)
+  maxLag <- lessTemplates:::.findMaxLag(occasions = occasions)
 
   S <- .fillCovariances(S = S,
                         latents = latents,

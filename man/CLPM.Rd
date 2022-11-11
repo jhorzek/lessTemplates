@@ -34,7 +34,7 @@ occasions (measurement invariant). Set to "no" to not add any latent variances (
 \value{
 list with (1) model -> a string with syntax to pass to lavaan as model,
 (2) data -> a data set in wide format to pass to lavaan, and (3) internal ->
-internal objects needed for other functions of lessTransformations.
+internal objects needed for other functions of lessTemplates.
 }
 \description{
 Creates a cross-lagged panel model from a lavaan-like syntax. The syntax (model)
@@ -51,7 +51,7 @@ the readable one to reduce the likelihood of errors.
 #
 # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
 
-library(lessTransformations)
+library(lessTemplates)
 library(lavaan)
 library(lessSEM)
 
@@ -83,8 +83,8 @@ RI_eta1 ~~ vri11*RI_eta1 + vri12*RI_eta2
 RI_eta2 ~~ vri22*RI_eta2
 "
 
-# create the lavaan syntax using lessTransformations:
-m <- lessTransformations::CLPM(model = model,
+# create the lavaan syntax using lessTemplates:
+m <- lessTemplates::CLPM(model = model,
                                data = data,
                                addManifestVar = "no")
 # fit the model:

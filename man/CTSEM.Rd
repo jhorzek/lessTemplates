@@ -16,7 +16,7 @@ Set up a continuous time structural equation model with lessSEM
 }
 \examples{
 library(ctsemOMX)
-library(lessTransformations)
+library(lessTemplates)
 library(lessSEM)
 library(lavaan)
 
@@ -52,7 +52,7 @@ eta1(0) ~ 1
 eta2(0) ~ 1
 "
 
-ctsem <- lessTransformations::CTSEM(model = model,
+ctsem <- lessTemplates::CTSEM(model = model,
                                     data = data)
 
 fit_lavaan <- sem(model = ctsem$model,
@@ -100,7 +100,7 @@ RIY1 ~1
 RIY2 ~1
 "
 
-ctsem <- lessTransformations::CTSEM(model = model,
+ctsem <- lessTemplates::CTSEM(model = model,
                                     data = data)
 
 fit_lavaan <- sem(model = ctsem$model,
