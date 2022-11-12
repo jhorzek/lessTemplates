@@ -11,14 +11,15 @@ License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 Depends: dplyr
-Imports: tidyr, stringr, lessSEM, crayon
+Imports: tidyr, stringr, lessSEM, crayon, lavaan
 RoxygenNote: 7.2.1
 Suggests: 
     mvtnorm,
-    lavaan,
     stringr,
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    ctsemOMX
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+URL: https://jhorzek.github.io/lessTemplates/

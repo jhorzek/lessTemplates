@@ -24,6 +24,17 @@ You can install the development version of lessTemplates from
 devtools::install_github("jhorzek/lessTemplates")
 ```
 
+## Main functions
+
+The package includes vignettes to explain the main functions. See…
+
+1.  …
+    `vignette(topic = "Cross-Lagged-Panel-Model", package = "lessTemplates")`
+    for the cross-lagged panel model
+2.  …
+    `vignette(topic = "Continuous-Time-SEM", package = "lessTemplates")`
+    for the continuous time structural equation model implementation.
+
 ## Example
 
 ``` r

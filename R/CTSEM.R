@@ -16,7 +16,6 @@
 #'                      n.manifest=2,
 #'                      manifestNames = c("Y1", "Y2"))
 #'
-#' # Then convert the time intervals to absolute time
 #' data <- ctDeintervalise(datalong = data, id='id', dT='dT')
 #' colnames(data) <- c("person", "time", "Y1", "Y2")
 #' data <- as.data.frame(data)
@@ -45,63 +44,16 @@
 #' ctsem <- lessTemplates::CTSEM(model = model,
 #'                                     data = data)
 #'
-#' fit_lavaan <- sem(model = ctsem$model,
-#'                   data = ctsem$data,
-#'                   do.fit = FALSE,
-#'                   missing = "ml",
-#'                   meanstructure = TRUE)
+#' fit <- bfgs(lavaanModel = ctsem$lavaanModel,
+#'             modifyModel = modifyModel(transformations = ctsem$transformation))
 #'
-#' ctfit <- lessSEM::bfgs(lavaanModel = fit_lavaan,
-#'                        modifyModel = modifyModel(transformations = ctsem$transformation))
-#'
-#' ctfit@parameters[,sort(ctfit@parameterLabels)]
+#' fit@parameters[,sort(fit@parameterLabels)]
 #'
 #' # comparison
 #' AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
 #'                          Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
 #' AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = T)
 #' summary(AnomAuthfit)
-#'
-#' # adding a random intercept
-#' model <- "
-#' d_eta1(t) ~ eta1(t) + eta2(t)
-#' d_eta2(t) ~ eta1(t) + eta2(t)
-#'
-#' d_eta1(t) ~~ d_eta1(t) + d_eta2(t)
-#' d_eta2(t) ~~ d_eta2(t)
-#'
-#' eta1(t) =~ 1*Y1(t)
-#' eta2(t) =~ 1*Y2(t)
-#'
-#' Y1(t) ~~ 0*Y1(t)
-#' Y2(t) ~~ 0*Y2(t)
-#'
-#' Y1(t) ~ m1*1
-#' Y2(t) ~ m2*1
-#'
-#' eta1(0) ~ 1
-#' eta2(0) ~ 1
-#'
-#' RIY1 =~ 1*Y1(t)
-#' RIY2 =~ 1*Y2(t)
-#' RIY1 ~~ RIY1 + RIY2
-#' RIY2 ~~ RIY2
-#' RIY1 ~1
-#' RIY2 ~1
-#' "
-#'
-#' ctsem <- lessTemplates::CTSEM(model = model,
-#'                                     data = data)
-#'
-#' fit_lavaan <- sem(model = ctsem$model,
-#'                   data = ctsem$data,
-#'                   do.fit = FALSE,
-#'                   missing = "ml",
-#'                   meanstructure = TRUE)
-#'
-#' ctfit <- lessSEM::bfgs(lavaanModel = fit_lavaan,
-#'                        modifyModel = modifyModel(transformations = ctsem$transformation))
-#' ctfit@parameters[,sort(ctfit@parameterLabels)]
 #' @export
 CTSEM <- function(model,
                   data){
@@ -140,24 +92,33 @@ CTSEM <- function(model,
 
   # set up discrete time model as basis
   arclModel <- lessTemplates:::.getDiscreteBasis(syntax = syntax,
-                                                       latents = latents,
-                                                       manifests = manifests)
+                                                 latents = latents,
+                                                 manifests = manifests)
 
   ctMatrices <- lessTemplates:::.getCTSEMMatrices(syntax = syntax,
-                                                        arclModel = arclModel)
+                                                  arclModel = arclModel)
 
   clpm <- lessTemplates::CLPM(model = arclModel$syntax,
-                                    data = arclData[,colnames(arclData) != "time"],
-                                    silent = TRUE,
-                                    meanstructure = grepl(pattern = "*1", x = arclModel$syntax))
+                              data = arclData[,colnames(arclData) != "time"],
+                              silent = TRUE,
+                              meanstructure = grepl(pattern = "*1", x = arclModel$syntax))
 
   transformations <- lessTemplates:::.getCTSEMTransformations(arclModel = arclModel,
-                                                                    dataCTSEM = dataCTSEM,
-                                                                    ctMatrices = ctMatrices)
+                                                              dataCTSEM = dataCTSEM,
+                                                              ctMatrices = ctMatrices)
+
+  fit_lavaan <- lavaan::sem(model = clpm$model,
+                            data = clpm$data,
+                            do.fit = FALSE,
+                            missing = "ml",
+                            meanstructure = TRUE)
   return(list(
-    model = clpm$model,
-    data = clpm$data,
-    transformation = transformations
+    lavaanModel = fit_lavaan,
+    transformation = transformations,
+    internal = list(
+      model = clpm$model,
+      data = clpm$data
+    )
   ))
 }
 
