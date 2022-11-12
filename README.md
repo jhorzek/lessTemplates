@@ -5,10 +5,10 @@
 
 The objective of lessTemplates is to provide a simplified implementation
 for some common models which can be used in lessSEM. Currently included
-are
+are:
 
-1.  cross-lagged panel models (with random intercepts)
-2.  continuous time structural equation models
+1.  cross-lagged panel models (with random intercepts).
+2.  continuous time structural equation models.
 
 Additionally, lessSEM also provides some transformations for these
 models which allow for regularizing specific model structures (e.g., to
