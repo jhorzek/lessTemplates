@@ -2,7 +2,7 @@
 title: "Continuous-Time-SEM"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{CTSEM}
+  %\VignetteIndexEntry{Continuous-Time-SEM}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
