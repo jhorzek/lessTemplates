@@ -426,6 +426,25 @@ CTSEM <- function(model,
 
 .getCTSEMTransformations <- function(arclModel, dataCTSEM, ctMatrices){
 
+  transformationList <- list(
+    DRIFT = matrix(0, nrow = nrow(ctMatrices$DRIFT), ncol = ncol(ctMatrices$DRIFT)),
+    DIFFUSION = matrix(0, nrow = nrow(ctMatrices$DIFFUSION), ncol = ncol(ctMatrices$DIFFUSION)),
+    driftHash = kronecker(diag(nrow(ctMatrices$DRIFT)), diag(nrow(ctMatrices$DRIFT)))
+  ) # list with additional elements to speed up the computation
+
+  lengthManif <- length(unique(dataCTSEM$timetable$timeInterval[dataCTSEM$timetable$timeInterval != 0]))
+  manifelements <- vector("list", length = 2*lengthManif)
+  names(manifelements) <- c(paste0("ARCL_", which(unique(dataCTSEM$timetable$timeInterval) != 0)),
+                            paste0("LVCOV_", which(unique(dataCTSEM$timetable$timeInterval) != 0)))
+  for(i in 1:length(manifelements)){
+    if(grepl(pattern = "ARCL_", x = names(manifelements[i])))
+      manifelements[[i]] <- matrix(0, nrow = nrow(ctMatrices$DRIFT), ncol = ncol(ctMatrices$DRIFT))
+    if(grepl(pattern = "LVCOV_", x = names(manifelements[i])))
+      manifelements[[i]] <- matrix(0, nrow = nrow(ctMatrices$DIFFUSION), ncol = ncol(ctMatrices$DIFFUSION))
+  }
+
+  transformationList <- c(transformationList, manifelements)
+
   parameters <- c() # names of parameters
   start <- c() # starting values
   for(i in 1:nrow(ctMatrices$DRIFT)){
@@ -474,30 +493,53 @@ CTSEM <- function(model,
 
   }
 
-  transformations <- paste0("arma::mat DRIFT(", nrow(ctMatrices$DRIFT), ",", ncol(ctMatrices$DRIFT), ")")
+  transformations <- c("\ndouble tmpvalue = 0.0\nbool DRIFTChanged = false\narma::mat DRIFT = transformationList[\"DRIFT\"]\nRcpp::Rcout << DRIFT <<std::endl\n")
   for(i in 1:nrow(ctMatrices$DRIFT)){
     for(j in 1:ncol(ctMatrices$DRIFT)){
       transformations <- c(transformations,
-                           paste0("DRIFT(",i-1,",", j-1,") = ", ctMatrices$DRIFT[i,j])
+                           paste0(
+                             "tmpvalue = DRIFT(",i-1,",", j-1,")\n",
+                             "if(tmpvalue != ", ctMatrices$DRIFT[i,j],"){\n",
+                             " Rcpp::Rcout << \"DRIFT CHANGED\" <<std::endl\n",
+                                  " DRIFTChanged = true\n",
+                                  " DRIFT(",i-1,",", j-1,") = ", ctMatrices$DRIFT[i,j]),
+                           " Rcpp::Rcout << DRIFT <<std::endl\n",
+                           "\n}
+                           "
+
       )
     }
   }
   transformations <- c(transformations,
-                       paste0("arma::mat driftHash = kron(DRIFT, arma::eye(",nrow(ctMatrices$DRIFT), ",", nrow(ctMatrices$DRIFT),"))",
-                              "+ kron(arma::eye(",nrow(ctMatrices$DRIFT),",",nrow(ctMatrices$DRIFT),"), DRIFT)")
-  )
+                       paste0("transformationList[\"DRIFT\"] = DRIFT"),
+                       paste0("arma::mat driftHash = transformationList[\"driftHash\"]\n",
+                       "if(DRIFTChanged){\n",
+                       "Rcpp::Rcout << \"Computing DRIFTHash\" <<std::endl\n",
+                              " driftHash = kron(DRIFT, arma::eye(",nrow(ctMatrices$DRIFT), ",", nrow(ctMatrices$DRIFT),"))",
+                              "+ kron(arma::eye(",nrow(ctMatrices$DRIFT),",",nrow(ctMatrices$DRIFT),"), DRIFT)\n",
+                              "transformationList[\"driftHash\"] = driftHash\n",
+                       " Rcpp::Rcout << driftHash <<std::endl\n",
+                              "}"))
 
   transformations <- c(transformations,
-                       paste0("arma::mat DIFFUSION(", nrow(ctMatrices$DIFFUSION), ",", ncol(ctMatrices$DIFFUSION), ")")
-  )
+                       "bool DIFFUSIONChanged = false\narma::mat DIFFUSION = transformationList[\"DIFFUSION\"]")
 
   for(i in 1:nrow(ctMatrices$DIFFUSION)){
     for(j in 1:ncol(ctMatrices$DIFFUSION)){
       transformations <- c(transformations,
-                           paste0("DIFFUSION(",i-1,",", j-1,") = ", ctMatrices$DIFFUSION[i,j])
+                           paste0("tmpvalue = DIFFUSION(",i-1,",", j-1,")\n",
+                                  "if(tmpvalue != ", ctMatrices$DIFFUSION[i,j],"){\n",
+                                  "Rcpp::Rcout << \"DIFFUSION changed\" <<std::endl\n",
+                                  " DIFFUSIONChanged = true\n",
+                                  " DIFFUSION(",i-1,",", j-1,") = ", ctMatrices$DIFFUSION[i,j]),
+                           " Rcpp::Rcout << DIFFUSION <<std::endl\n",
+                           "\n}\n"
       )
     }
   }
+  transformations <- c(transformations,
+                       paste0("transformationList[\"DIFFUSION\"] = DIFFUSION"))
+
 
   # we will iterate over all unique time intervals and define
   # all transformations required to the drift and diffusion matrices
@@ -507,16 +549,27 @@ CTSEM <- function(model,
 
     transformations <- c(transformations,
                          # create DRIFT
-                         paste0(
-                           "arma::mat ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
-                           " arma::expmat(DRIFT*", ti, ")"
+                         paste0("arma::mat ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),
+                         " = transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"]\n",
+                         "if(DRIFTChanged){\n",
+                         "Rcpp::Rcout << \"Computing ARCL\" <<std::endl\n",
+                         " ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
+                           " arma::expmat(DRIFT*", ti, ")\n",
+                         "Rcpp::Rcout << ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti)," <<std::endl\n",
+                           " transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),
+                                                "\"] = ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),"\n}\n"
                          ),
                          # create diffusion
                          paste0(
-                           "arma::mat LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
+                           "arma::mat LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = transformationList[\"", "LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"]\n",
+                           "if(DRIFTChanged | DIFFUSIONChanged){\n",
+                           "Rcpp::Rcout << \"Computing LVCOV\" <<std::endl\n",
+                           " arma::mat LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
                            "arma::reshape(arma::inv(driftHash) * ",
                            "(arma::expmat(driftHash*", ti, ") - arma::eye(arma::size(arma::expmat(driftHash*", ti, "))))*",
-                           "arma::vectorise(DIFFUSION),",nrow(ctMatrices$DRIFT),",",nrow(ctMatrices$DRIFT),")
+                           "arma::vectorise(DIFFUSION),",nrow(ctMatrices$DRIFT),",",nrow(ctMatrices$DRIFT),")\n",
+                           "Rcpp::Rcout << LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti)," <<std::endl\n",
+                           "transformationList[\"", "LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"] = LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti),"\n}\n
                           "
                          )
     )
@@ -585,9 +638,11 @@ CTSEM <- function(model,
   transform <- paste0(
     c(parametersStr,
       startStr,
-      transformationsStr),
+      transformationsStr
+      ),
     collapse = "\n"
   )
 
-  return(transform)
+  return(list(transformation = transform,
+              transformationList = transformationList))
 }
