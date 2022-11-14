@@ -139,7 +139,7 @@ transformCLPM <- function(CLPM,
 
     for(i in 2:length(instances)){
       transformations <- c(transformations,
-                           paste0(instances[i], " = ", instances[i-1], " + Delta_", instances[i])
+                           paste0(instances[i], " = ", instances[i-1], " + Delta_", instances[i], ";")
       )
       transformationParameters <- c(transformationParameters,
                                     instances[i],
@@ -155,7 +155,7 @@ transformCLPM <- function(CLPM,
 
   transformationString <- paste0(
     "parameters: ", paste0(transformationParameters, collapse = ", "),
-    "\n\n#Transformations:\n",
+    "\n\n//Transformations:\n",
     paste0(transformations, collapse = "\n")
   )
 
@@ -199,7 +199,7 @@ transformCLPM <- function(CLPM,
 
     for(i in 1:length(instances)){
       transformations <- c(transformations,
-                           paste0(instances[i], " = ", parameters[p], " + Delta_", instances[i])
+                           paste0(instances[i], " = ", parameters[p], " + Delta_", instances[i], ";")
       )
       transformationParameters <- c(transformationParameters,
                                     parameters[p],
@@ -215,7 +215,7 @@ transformCLPM <- function(CLPM,
 
   transformationString <- paste0(
     "parameters: ", paste0(transformationParameters, collapse = ", "),
-    "\n\n#Transformations:\n",
+    "\n\n//Transformations:\n",
     paste0(transformations, collapse = "\n")
   )
 

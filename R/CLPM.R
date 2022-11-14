@@ -190,7 +190,7 @@ CLPM <- function(model,
   nOccasions <- length(unique(data$occasion))
 
   # remove unnecessary white space
-  syntax <- lessSEM:::.reduceSyntax(syntax = model)
+  syntax <- lessTemplates:::.reduceSyntax(syntax = model)
   syntax <- lessTemplates:::.removeWhitespace(syntax = syntax)
   syntax <- lessTemplates:::.makeSingleLine(syntax = syntax)
 
