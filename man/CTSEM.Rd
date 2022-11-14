@@ -55,7 +55,8 @@ ctsem <- lessTemplates::CTSEM(model = model,
                                     data = data)
 
 fit <- bfgs(lavaanModel = ctsem$lavaanModel,
-            modifyModel = modifyModel(transformations = ctsem$transformation))
+            modifyModel = modifyModel(transformations = ctsem$transformation,
+                                      transformationList = ctsem$transformationList))
 
 fit@parameters[,sort(fit@parameterLabels)]
 

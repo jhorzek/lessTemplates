@@ -143,6 +143,8 @@ summary(ctsem$lavaanModel)
 <summary>Show transformation details</summary>
 ```{r}
 cat(ctsem$transformation)
+# the following list contains elements referenced in the transformations:
+print(ctsem$transformationList)
 ```
 </details>
 
@@ -154,13 +156,15 @@ no regularization is required, we can use the `bfgs` function:
 library(lessSEM)
 
 fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
-            modifyModel = modifyModel(transformations = ctsem$transformation))
+            modifyModel = modifyModel(transformations = ctsem$transformation,
+                                      transformationList = ctsem$transformationList))
 ```
 ```{r,eval=FALSE}
 library(lessSEM)
 
 fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
-            modifyModel = modifyModel(transformations = ctsem$transformation))
+            modifyModel = modifyModel(transformations = ctsem$transformation,
+                                      transformationList = ctsem$transformationList))
 ```
 The parameter estimates are given by
 ```{r}
@@ -231,13 +235,15 @@ RI2 ~~ RI2
 ctsemRI <- CTSEM(model = modelRI, 
                  data = data)
 fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
-              modifyModel = modifyModel(transformations = ctsemRI$transformation))
+              modifyModel = modifyModel(transformations = ctsemRI$transformation,
+                                        transformationList = ctsemRI$transformationList))
 ```
 ```{r,eval=FALSE}
 ctsemRI <- CTSEM(model = modelRI, 
                  data = data)
 fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
-              modifyModel = modifyModel(transformations = ctsemRI$transformation))
+              modifyModel = modifyModel(transformations = ctsemRI$transformation,
+                                        transformationList = ctsemRI$transformationList))
 ```
 The parameter estimates are given by
 ```{r}
@@ -265,7 +271,7 @@ AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1),
                          MANIFESTVAR=diag(0, 2), 
                          TRAITVAR = NULL,
                          MANIFESTTRAITVAR = "auto" # add random intercepts
-                         ) 
+) 
 AnomAuthfit <- ctFit(AnomAuth, 
                      AnomAuthmodel)
 summary(AnomAuthfit)

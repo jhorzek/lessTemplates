@@ -45,7 +45,8 @@
 #'                                     data = data)
 #'
 #' fit <- bfgs(lavaanModel = ctsem$lavaanModel,
-#'             modifyModel = modifyModel(transformations = ctsem$transformation))
+#'             modifyModel = modifyModel(transformations = ctsem$transformation,
+#'                                       transformationList = ctsem$transformationList))
 #'
 #' fit@parameters[,sort(fit@parameterLabels)]
 #'
@@ -519,7 +520,7 @@ CTSEM <- function(model,
     }
   }
   transformations <- c(transformations,
-                       paste0("if(DRIFTChanged {transformationList[\"DRIFT\"] = DRIFT;}"),
+                       paste0("if(DRIFTChanged) {transformationList[\"DRIFT\"] = DRIFT;}"),
                        paste0("arma::mat driftHash = transformationList[\"driftHash\"];\n",
                        "if(DRIFTChanged){\n",
                               " driftHash = kron(DRIFT, arma::eye(",nrow(ctMatrices$DRIFT), ",", nrow(ctMatrices$DRIFT),"))",
