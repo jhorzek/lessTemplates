@@ -291,7 +291,7 @@ CLPM <- function(model,
       # remove all elements with u below 1
       if(occasions_u$evaluated[i] < 1){
         syntax_u <- stringr::str_replace_all(string = syntax_u,
-                                             pattern = paste0("[a-zA-Z0-9_\\(\\)]*[\\*]*[a-zA-Z0-9]+_",occasions_u$regex[i], "[\\+]*"),
+                                             pattern = paste0("[.a-zA-Z0-9_\\(\\)\\-]*[\\*]*[a-zA-Z0-9]+_",occasions_u$regex[i], "[\\+]*"),
                                              replacement = "")
         next
       }
@@ -429,7 +429,7 @@ CLPM <- function(model,
 .getVariableNamesCLPM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[a-zA-Z0-9_]+\\*|[a-zA-Z0-9_]+_\\(u[\\-]*[0-9]*\\)\\*",
+  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_\\-]+\\*|[.a-zA-Z0-9_\\-]+_\\(u[\\-]*[0-9]*\\)\\*",
                    replacement = "",
                    x = syntax)
   # remove means
@@ -496,15 +496,15 @@ CLPM <- function(model,
     label <- NULL
     rhsElement <- NULL
 
-    if(grepl(pattern = "^[a-zA-Z0-9_]+\\*", x = rhs)){
+    if(grepl(pattern = "^[.a-zA-Z0-9_\\-]+\\*", x = rhs)){
       # starts with an modifier
       label <- stringr::str_extract(string = rhs,
-                                    pattern = "^[a-zA-Z0-9_]+\\*")
+                                    pattern = "^[a-zA-Z0-9_.\\-]+\\*")
       label <- stringr::str_remove(string = label,
                                    pattern = "\\*")
 
       rhs <- stringr::str_remove(string = rhs,
-                                 pattern = "^[a-zA-Z0-9_]+\\*")
+                                 pattern = "^[.a-zA-Z0-9_\\-]+\\*")
     }
 
     # now that we removed the modifier, our equation starts with a variable

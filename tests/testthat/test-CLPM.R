@@ -136,4 +136,47 @@ RI_eta2 ~~ 0*eta1_u1 + 0*eta2_u1
                   meanstructure = TRUE,
                   missing = "ml")
   testthat::expect_equal(all(abs(coef(fit_comp)[names(coef(fit))] - coef(fit))<1e-5), TRUE)
+
+  # fixing values
+
+  model <- "
+# autoregressive and cross-lagged parameters:
+eta1_(u) ~ a11_(u)*eta1_(u-1) + .2*eta2_(u-1)
+eta2_(u) ~ -.1*eta1_(u-1) + 0.3*eta2_(u-1)
+
+# covariances
+eta1_(u) ~~ 0*eta2_(u) + v11*eta1_(u)
+eta2_(u) ~~ v22*eta2_(u)
+
+# Add observations:
+eta1_(u) =~ 1*y1_(u)
+eta2_(u) =~ 1*y2_(u)
+
+y1_(u) ~~ 0*y1_(u)
+y2_(u) ~~ 0*y2_(u)
+
+# random intercepts
+RI_eta1 =~ 1*y1_(u)
+RI_eta2 =~ 1*y2_(u)
+
+RI_eta1 ~~ vri11*RI_eta1 + vri12*RI_eta2
+RI_eta2 ~~ vri22*RI_eta2
+"
+
+  # create the lavaan syntax using lessTemplates:
+  m <- lessTemplates::CLPM(model = model,
+                           data = data,
+                           addManifestVar = "no")
+  # fit the model:
+  fit <- sem(model = m$model,
+             data = m$data,
+             meanstructure = TRUE,
+             missing = "ml")
+  # get the parameter estimates
+  coef(fit)
+
+  ARCL <- fit@Model@GLIST$beta[3:4,1:2]
+
+  testthat::expect_equal(all(c(ARCL[2,1] == -.1, ARCL[1,2] == .2, ARCL[2,2] == .3)), TRUE)
+
 })

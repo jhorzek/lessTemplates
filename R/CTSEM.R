@@ -159,7 +159,7 @@ CTSEM <- function(model,
 .getVariableNamesCTSEM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_]+\\*",
+  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_\\-]+\\*",
                    replacement = "",
                    x = syntax)
   # remove means
@@ -370,7 +370,7 @@ CTSEM <- function(model,
   )
 
   for(i in 1:nrow(DRIFT)){
-    predicted_in <- grepl(pattern = paste0("^", rownames(DRIFT)[i], "\\(t\\)~[0-9a-zA-Z]+"), x = syntax)
+    predicted_in <- grepl(pattern = paste0("^", rownames(DRIFT)[i], "\\(t\\)~[0-9a-zA-Z.\\-]+"), x = syntax)
     if(!any(predicted_in)) next
 
     rhs <- stringr::str_remove(syntax[predicted_in],
@@ -380,10 +380,10 @@ CTSEM <- function(model,
       # check if variable j predicts the change in i:
       if(grepl(pattern = paste0(colnames(DRIFT)[j], "\\(t\\)"), x = rhs)){
         element <- stringr::str_extract(string = rhs,
-                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(DRIFT)[j], "\\(t\\)"))
+                                        pattern = paste0("[.0-9a-zA-Z\\*\\-]*",colnames(DRIFT)[j], "\\(t\\)"))
         if(grepl(pattern = "\\*", x = element)){
           DRIFT[i,j] <- stringr::str_extract(string = element,
-                                             pattern = "^[.0-9a-zA-Z]")
+                                             pattern = "^[\\-]*[.0-9a-zA-Z]+")
         }else{
           DRIFT[i,j] <- paste0("drift_",rownames(DRIFT)[i],"_", colnames(DRIFT)[j])
         }
@@ -392,13 +392,13 @@ CTSEM <- function(model,
   }
 
   logDiagDIFFUSION <- matrix("0.0",
-                      nrow = length(dependent),
-                      ncol = length(dependent),
-                      dimnames = list(dependent, dependent)
+                             nrow = length(dependent),
+                             ncol = length(dependent),
+                             dimnames = list(dependent, dependent)
   )
 
   for(i in 1:nrow(logDiagDIFFUSION)){
-    predicted_in <- grepl(pattern = paste0("^", rownames(logDiagDIFFUSION)[i], "\\(t\\)~~[0-9a-zA-Z]+"), x = syntax)
+    predicted_in <- grepl(pattern = paste0("^", rownames(logDiagDIFFUSION)[i], "\\(t\\)~~[0-9a-zA-Z.\\-]+"), x = syntax)
     if(!any(predicted_in)) next
 
     rhs <- stringr::str_remove(syntax[predicted_in],
@@ -408,10 +408,17 @@ CTSEM <- function(model,
       # check if variable j predicts the change in i:
       if(grepl(pattern = paste0(colnames(logDiagDIFFUSION)[j], "\\(t\\)"), x = rhs)){
         element <- stringr::str_extract(string = rhs,
-                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(logDiagDIFFUSION)[j], "\\(t\\)"))
+                                        pattern = paste0("[.0-9a-zA-Z\\*\\-]*",colnames(logDiagDIFFUSION)[j], "\\(t\\)"))
         if(grepl(pattern = "\\*", x = element)){
-          logDiagDIFFUSION[i,j] <- stringr::str_extract(string = element,
-                                                 pattern = "^[.0-9a-zA-Z]")
+          if((i == j) & grepl(pattern = "^[.0-9\\-]+", x = element)){
+            # in case of diagonal values, the parameter will be the log of the actual
+            # value. This prevents negative variances.
+            logDiagDIFFUSION[i,j] <- log(as.numeric(stringr::str_extract(string = element,
+                                                                         pattern = "^[\\-]*[.0-9a-zA-Z]+")))
+          }else{
+            logDiagDIFFUSION[i,j] <- stringr::str_extract(string = element,
+                                                          pattern = "^[\\-]*[.0-9a-zA-Z]+")
+          }
         }else{
           if(i == j){
             # in case of diagonal values, the parameter will be the log of the actual
@@ -442,24 +449,24 @@ CTSEM <- function(model,
   ) # list with additional elements to speed up the computation
 
   # change values if user does not want to estimate all parameters:
-  for(i in 1:nrow(transformationList$DRIFT)){
-    for(j in 1:ncol(transformationList$DRIFT)){
-      if(grepl(pattern = "^[0-9]+", x = ctMatrices$DRIFT[i,j])){
-        transformationList$DRIFT[i,j] <- as.numeric(ctMatrices$DRIFT[i,j])
-      }
-    }
-  }
-  for(i in 1:nrow(transformationList$logDiagDIFFUSION)){
-    for(j in 1:ncol(transformationList$logDiagDIFFUSION)){
-      if(grepl(pattern = "^[0-9]+", x = ctMatrices$logDiagDIFFUSION[i,j])){
-        if(i == j){
-          transformationList$logDiagDIFFUSION[i,j] <- log(as.numeric(ctMatrices$logDiagDIFFUSION[i,j]))
-        }else{
-          transformationList$logDiagDIFFUSION[i,j] <- as.numeric(ctMatrices$logDiagDIFFUSION[i,j])
-        }
-      }
-    }
-  }
+  # for(i in 1:nrow(transformationList$DRIFT)){
+  #   for(j in 1:ncol(transformationList$DRIFT)){
+  #     if(grepl(pattern = "^[0-9]+", x = ctMatrices$DRIFT[i,j])){
+  #       transformationList$DRIFT[i,j] <- as.numeric(ctMatrices$DRIFT[i,j])
+  #     }
+  #   }
+  # }
+  # for(i in 1:nrow(transformationList$logDiagDIFFUSION)){
+  #   for(j in 1:ncol(transformationList$logDiagDIFFUSION)){
+  #     if(grepl(pattern = "^[0-9]+", x = ctMatrices$logDiagDIFFUSION[i,j])){
+  #       if(i == j){
+  #         transformationList$logDiagDIFFUSION[i,j] <- log(as.numeric(ctMatrices$logDiagDIFFUSION[i,j]))
+  #       }else{
+  #         transformationList$logDiagDIFFUSION[i,j] <- as.numeric(ctMatrices$logDiagDIFFUSION[i,j])
+  #       }
+  #     }
+  #   }
+  # }
 
   lengthManif <- length(unique(dataCTSEM$timetable$timeInterval[dataCTSEM$timetable$timeInterval != 0]))
   manifelements <- vector("list", length = 2*lengthManif)
