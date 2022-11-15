@@ -171,7 +171,19 @@ The parameter estimates are given by
 coef(fit)
 ```
 Note that `CTSEM` automatically estimates the initial covariances and means separately
-from all other covariances and means.
+from all other covariances and means. Furthermore, the diagonal elements of the 
+diffusion matrix are automatically log-transformed to prevent negative variances.
+The final values of the drift and diffusion matrices can also be found in the 
+`ctsem$transformationList` object, which has been changed by reference in C++:
+
+```{r}
+# DRIFT:
+print(ctsem$transformationList$DRIFT)
+
+# DIFFUSION:
+print(ctsem$transformationList$DIFFUSION)
+```
+
 
 <details>
 <summary>Compare to **ctsemOMX**</summary>
@@ -248,6 +260,12 @@ fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel,
 The parameter estimates are given by
 ```{r}
 coef(fitRI)
+
+# DRIFT:
+print(ctsem$transformationList$DRIFT)
+
+# DIFFUSION:
+print(ctsem$transformationList$DIFFUSION)
 ```
 We can compare the model with and the model without random intercepts using
 the information criteria implemented in **lessSEM**:
