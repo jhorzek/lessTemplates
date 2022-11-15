@@ -391,38 +391,44 @@ CTSEM <- function(model,
     }
   }
 
-  DIFFUSION <- matrix("0.0",
+  logDiagDIFFUSION <- matrix("0.0",
                       nrow = length(dependent),
                       ncol = length(dependent),
                       dimnames = list(dependent, dependent)
   )
 
-  for(i in 1:nrow(DIFFUSION)){
-    predicted_in <- grepl(pattern = paste0("^", rownames(DIFFUSION)[i], "\\(t\\)~~[0-9a-zA-Z]+"), x = syntax)
+  for(i in 1:nrow(logDiagDIFFUSION)){
+    predicted_in <- grepl(pattern = paste0("^", rownames(logDiagDIFFUSION)[i], "\\(t\\)~~[0-9a-zA-Z]+"), x = syntax)
     if(!any(predicted_in)) next
 
     rhs <- stringr::str_remove(syntax[predicted_in],
-                               paste0("^", rownames(DIFFUSION)[i], "\\(t\\)~~"))
+                               paste0("^", rownames(logDiagDIFFUSION)[i], "\\(t\\)~~"))
 
-    for(j in 1:ncol(DIFFUSION)){
+    for(j in 1:ncol(logDiagDIFFUSION)){
       # check if variable j predicts the change in i:
-      if(grepl(pattern = paste0(colnames(DIFFUSION)[j], "\\(t\\)"), x = rhs)){
+      if(grepl(pattern = paste0(colnames(logDiagDIFFUSION)[j], "\\(t\\)"), x = rhs)){
         element <- stringr::str_extract(string = rhs,
-                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(DIFFUSION)[j], "\\(t\\)"))
+                                        pattern = paste0("[.0-9a-zA-Z\\*]*",colnames(logDiagDIFFUSION)[j], "\\(t\\)"))
         if(grepl(pattern = "\\*", x = element)){
-          DIFFUSION[i,j] <- stringr::str_extract(string = element,
+          logDiagDIFFUSION[i,j] <- stringr::str_extract(string = element,
                                                  pattern = "^[.0-9a-zA-Z]")
         }else{
-          DIFFUSION[i,j] <- paste0("diffusion_",rownames(DIFFUSION)[i],"_", colnames(DIFFUSION)[j])
+          if(i == j){
+            # in case of diagonal values, the parameter will be the log of the actual
+            # value. This prevents negative variances.
+            logDiagDIFFUSION[i,j] <- paste0("log_diffusion_",rownames(logDiagDIFFUSION)[i],"_", colnames(logDiagDIFFUSION)[j])
+          }else{
+            logDiagDIFFUSION[i,j] <- paste0("diffusion_",rownames(logDiagDIFFUSION)[i],"_", colnames(logDiagDIFFUSION)[j])
+          }
         }
-        DIFFUSION[j,i] <- DIFFUSION[i,j]
+        logDiagDIFFUSION[j,i] <- logDiagDIFFUSION[i,j]
       }
     }
   }
 
   return(
     list(DRIFT = DRIFT,
-         DIFFUSION = DIFFUSION)
+         logDiagDIFFUSION = logDiagDIFFUSION)
   )
 }
 
@@ -430,9 +436,30 @@ CTSEM <- function(model,
 
   transformationList <- list(
     DRIFT = matrix(0, nrow = nrow(ctMatrices$DRIFT), ncol = ncol(ctMatrices$DRIFT)),
-    DIFFUSION = matrix(0, nrow = nrow(ctMatrices$DIFFUSION), ncol = ncol(ctMatrices$DIFFUSION)),
+    logDiagDIFFUSION = matrix(0, nrow = nrow(ctMatrices$logDiagDIFFUSION), ncol = ncol(ctMatrices$logDiagDIFFUSION)),
+    DIFFUSION = matrix(0, nrow = nrow(ctMatrices$logDiagDIFFUSION), ncol = ncol(ctMatrices$logDiagDIFFUSION)),
     driftHash = kronecker(diag(nrow(ctMatrices$DRIFT)), diag(nrow(ctMatrices$DRIFT)))
   ) # list with additional elements to speed up the computation
+
+  # change values if user does not want to estimate all parameters:
+  for(i in 1:nrow(transformationList$DRIFT)){
+    for(j in 1:ncol(transformationList$DRIFT)){
+      if(grepl(pattern = "^[0-9]+", x = ctMatrices$DRIFT[i,j])){
+        transformationList$DRIFT[i,j] <- as.numeric(ctMatrices$DRIFT[i,j])
+      }
+    }
+  }
+  for(i in 1:nrow(transformationList$logDiagDIFFUSION)){
+    for(j in 1:ncol(transformationList$logDiagDIFFUSION)){
+      if(grepl(pattern = "^[0-9]+", x = ctMatrices$logDiagDIFFUSION[i,j])){
+        if(i == j){
+          transformationList$logDiagDIFFUSION[i,j] <- log(as.numeric(ctMatrices$logDiagDIFFUSION[i,j]))
+        }else{
+          transformationList$logDiagDIFFUSION[i,j] <- as.numeric(ctMatrices$logDiagDIFFUSION[i,j])
+        }
+      }
+    }
+  }
 
   lengthManif <- length(unique(dataCTSEM$timetable$timeInterval[dataCTSEM$timetable$timeInterval != 0]))
   manifelements <- vector("list", length = 2*lengthManif)
@@ -442,7 +469,7 @@ CTSEM <- function(model,
     if(grepl(pattern = "ARCL_", x = names(manifelements[i])))
       manifelements[[i]] <- matrix(0, nrow = nrow(ctMatrices$DRIFT), ncol = ncol(ctMatrices$DRIFT))
     if(grepl(pattern = "LVCOV_", x = names(manifelements[i])))
-      manifelements[[i]] <- matrix(0, nrow = nrow(ctMatrices$DIFFUSION), ncol = ncol(ctMatrices$DIFFUSION))
+      manifelements[[i]] <- matrix(0, nrow = nrow(ctMatrices$logDiagDIFFUSION), ncol = ncol(ctMatrices$logDiagDIFFUSION))
   }
 
   transformationList <- c(transformationList, manifelements)
@@ -481,19 +508,19 @@ CTSEM <- function(model,
         }
       }
 
-      if(grepl(pattern = "^[a-zA-Z]", x = ctMatrices$DIFFUSION[i,j])){
+      if(grepl(pattern = "^[a-zA-Z]", x = ctMatrices$logDiagDIFFUSION[i,j])){
         parameters <- c(parameters,
-                        ctMatrices$DIFFUSION[i,j])
+                        ctMatrices$logDiagDIFFUSION[i,j])
         if(i == j){
           start_i <- .2
-          names(start_i) <- ctMatrices$DIFFUSION[i,j]
+          names(start_i) <- ctMatrices$logDiagDIFFUSION[i,j]
 
           start <- c(start,
                      start_i
           )
         }else{
           start_i <- .1
-          names(start_i) <- ctMatrices$DIFFUSION[i,j]
+          names(start_i) <- ctMatrices$logDiagDIFFUSION[i,j]
 
           start <- c(start,
                      start_i
@@ -511,8 +538,8 @@ CTSEM <- function(model,
                            paste0(
                              "tmpvalue = DRIFT(",i-1,",", j-1,");\n",
                              "if(tmpvalue != ", ctMatrices$DRIFT[i,j],"){\n",
-                                  " DRIFTChanged = true;\n",
-                                  " DRIFT(",i-1,",", j-1,") = ", ctMatrices$DRIFT[i,j], ";"),
+                             " DRIFTChanged = true;\n",
+                             " DRIFT(",i-1,",", j-1,") = ", ctMatrices$DRIFT[i,j], ";"),
                            "\n}
                            "
 
@@ -522,29 +549,33 @@ CTSEM <- function(model,
   transformations <- c(transformations,
                        paste0("if(DRIFTChanged) {transformationList[\"DRIFT\"] = DRIFT;}"),
                        paste0("arma::mat driftHash = transformationList[\"driftHash\"];\n",
-                       "if(DRIFTChanged){\n",
+                              "if(DRIFTChanged){\n",
                               " driftHash = kron(DRIFT, arma::eye(",nrow(ctMatrices$DRIFT), ",", nrow(ctMatrices$DRIFT),"))",
                               "+ kron(arma::eye(",nrow(ctMatrices$DRIFT),",",nrow(ctMatrices$DRIFT),"), DRIFT);\n",
                               "transformationList[\"driftHash\"] = driftHash;\n",
                               "}"))
 
   transformations <- c(transformations,
-                       "bool DIFFUSIONChanged = false;\narma::mat DIFFUSION = transformationList[\"DIFFUSION\"];")
+                       "bool logDiagDIFFUSIONChanged = false;\narma::mat logDiagDIFFUSION = transformationList[\"logDiagDIFFUSION\"];\narma::mat DIFFUSION = transformationList[\"DIFFUSION\"];")
 
-  for(i in 1:nrow(ctMatrices$DIFFUSION)){
-    for(j in 1:ncol(ctMatrices$DIFFUSION)){
+  for(i in 1:nrow(ctMatrices$logDiagDIFFUSION)){
+    for(j in 1:ncol(ctMatrices$logDiagDIFFUSION)){
       transformations <- c(transformations,
-                           paste0("tmpvalue = DIFFUSION(",i-1,",", j-1,");\n",
-                                  "if(tmpvalue != ", ctMatrices$DIFFUSION[i,j],"){\n",
-                                  " DIFFUSIONChanged = true;\n",
-                                  " DIFFUSION(",i-1,",", j-1,") = ", ctMatrices$DIFFUSION[i,j], ";"),
+                           paste0("tmpvalue = logDiagDIFFUSION(",i-1,",", j-1,");\n",
+                                  "if(tmpvalue != ", ctMatrices$logDiagDIFFUSION[i,j],"){\n",
+                                  " logDiagDIFFUSIONChanged = true;\n",
+                                  " logDiagDIFFUSION(",i-1,",", j-1,") = ", ctMatrices$logDiagDIFFUSION[i,j], ";"),
                            "\n}\n"
       )
     }
   }
   transformations <- c(transformations,
-                       paste0("if(DIFFUSIONChanged){transformationList[\"DIFFUSION\"] = DIFFUSION;}"))
-
+                       paste0("if(logDiagDIFFUSIONChanged){",
+                              "transformationList[\"logDiagDIFFUSION\"] = logDiagDIFFUSION;",
+                              "DIFFUSION = logDiagDIFFUSION;",
+                              "DIFFUSION.diag() = arma::exp(logDiagDIFFUSION.diag());",
+                              "transformationList[\"DIFFUSION\"] = DIFFUSION;",
+                              "}"))
 
   # we will iterate over all unique time intervals and define
   # all transformations required to the drift and diffusion matrices
@@ -555,17 +586,17 @@ CTSEM <- function(model,
     transformations <- c(transformations,
                          # create DRIFT
                          paste0("arma::mat ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),
-                         " = transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"];\n",
-                         "if(DRIFTChanged){\n",
-                         " ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
-                           " arma::expmat(DRIFT*", ti, ");\n",
-                           " transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),
-                                                "\"] = ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),";\n}\n"
+                                " = transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"];\n",
+                                "if(DRIFTChanged){\n",
+                                " ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
+                                " arma::expmat(DRIFT*", ti, ");\n",
+                                " transformationList[\"", "ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),
+                                "\"] = ARCL_",which(unique(dataCTSEM$timetable$timeInterval) == ti),";\n}\n"
                          ),
                          # create diffusion
                          paste0(
                            "arma::mat LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = transformationList[\"", "LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), "\"];\n",
-                           "if(DRIFTChanged | DIFFUSIONChanged){\n",
+                           "if(DRIFTChanged | logDiagDIFFUSIONChanged){\n",
                            " LVCOV_",which(unique(dataCTSEM$timetable$timeInterval) == ti), " = ",
                            "arma::reshape(arma::inv(driftHash) * ",
                            "(arma::expmat(driftHash*", ti, ") - arma::eye(arma::size(arma::expmat(driftHash*", ti, "))))*",
@@ -640,7 +671,7 @@ CTSEM <- function(model,
     c(parametersStr,
       startStr,
       transformationsStr
-      ),
+    ),
     collapse = "\n"
   )
 
