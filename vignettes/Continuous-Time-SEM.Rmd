@@ -248,24 +248,26 @@ ctsemRI <- CTSEM(model = modelRI,
                  data = data)
 fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
               modifyModel = modifyModel(transformations = ctsemRI$transformation,
-                                        transformationList = ctsemRI$transformationList))
+                                        transformationList = ctsemRI$transformationList),
+              control = controlBFGS(breakOuter = 1e-10))
 ```
 ```{r,eval=FALSE}
 ctsemRI <- CTSEM(model = modelRI, 
                  data = data)
 fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
               modifyModel = modifyModel(transformations = ctsemRI$transformation,
-                                        transformationList = ctsemRI$transformationList))
+                                        transformationList = ctsemRI$transformationList),
+              control = controlBFGS(breakOuter = 1e-10))
 ```
 The parameter estimates are given by
 ```{r}
 coef(fitRI)
 
 # DRIFT:
-print(ctsem$transformationList$DRIFT)
+print(ctsemRI$transformationList$DRIFT)
 
 # DIFFUSION:
-print(ctsem$transformationList$DIFFUSION)
+print(ctsemRI$transformationList$DIFFUSION)
 ```
 We can compare the model with and the model without random intercepts using
 the information criteria implemented in **lessSEM**:
@@ -292,7 +294,7 @@ AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1),
 ) 
 AnomAuthfit <- ctFit(AnomAuth, 
                      AnomAuthmodel)
-summary(AnomAuthfit)
+print(AnomAuthfit$mxobj$DRIFT$values)
 ```
 </details>
 
