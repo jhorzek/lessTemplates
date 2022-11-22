@@ -119,7 +119,9 @@ CTSEM <- function(model,
     transformationList = transformations$transformationList,
     internal = list(
       model = clpm$model,
-      data = clpm$data
+      data = clpm$data,
+      clpm = clpm,
+      arclModel = arclModel
     )
   ))
 }
