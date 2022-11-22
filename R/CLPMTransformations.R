@@ -133,7 +133,9 @@ transformCLPM <- function(CLPM,
     loc <- slot(CLPM$internal$RAM, name = location)
 
     # get all instances of this parameter
-    instances <- sort(loc[grepl(pattern = searchFor, x = loc)])
+    # using str_sort to make sure that u2 comes before u10
+    instances <- stringr::str_sort(x = loc[grepl(pattern = searchFor, x = loc)],
+                                   numeric = TRUE)
     if(length(instances) == 1)
       stop("Cannot create differences for", instances, " because there is only one occasion for this instance.")
 
@@ -193,7 +195,8 @@ transformCLPM <- function(CLPM,
     loc <- slot(CLPM$internal$RAM, name = location)
 
     # get all instances of this parameter
-    instances <- sort(loc[grepl(pattern = searchFor, x = loc)])
+    instances <- stringr::str_sort(loc[grepl(pattern = searchFor, x = loc)],
+                                   numeric = TRUE)
     if(length(instances) == 1)
       stop("Cannot create differences for", instances, " because there is only one occasion for this instance.")
 
