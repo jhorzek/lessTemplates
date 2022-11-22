@@ -452,7 +452,7 @@ The best parameters based on the BIC can be extracted with
 coef(lassoFit, criterion = "BIC")
 ```
 
-Note that `a12` does change at measurement occasion 3 and then stays constant again.
+Note that, for instance, `a12` does change around measurement occasion 4 and then stays constant again.
 
 ## References
 
