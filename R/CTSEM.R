@@ -161,7 +161,7 @@ CTSEM <- function(model,
 .getVariableNamesCTSEM <- function(syntax){
 
   # remove all parameters
-  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_\\-]+\\*",
+  syntax_t <- gsub(pattern = "[.a-zA-Z0-9_\\-\\(\\)]+\\*",
                    replacement = "",
                    x = syntax)
   # remove means
