@@ -4,6 +4,13 @@
 #'
 #' @param model syntax to specify the model
 #' @param data data set in long format with person and time for each observation
+#' @param do.fit argument passed to intermediary lavaan model. Setting to FALSE
+#' is recommended because this model will fail to fit in most cases
+#' @param missing argument passed to intermediary lavaan model. Set to "ml" for
+#' full information maximum likelihood
+#' @param meanstructure argument passed to intermediary lavaan model. Setting to TRUE
+#' is recommended
+#' @param ... additional arguments passed to intermediary lavaan model
 #' @examples
 #' library(ctsemOMX)
 #' library(lessTemplates)
@@ -57,7 +64,11 @@
 #' summary(AnomAuthfit)
 #' @export
 CTSEM <- function(model,
-                  data){
+                  data,
+                  do.fit = FALSE,
+                  missing = "ml",
+                  meanstructure = TRUE,
+                  ...){
 
   cat("\nSetting up a continuous time structural equation model.\n")
 
@@ -108,11 +119,12 @@ CTSEM <- function(model,
                                                               dataCTSEM = dataCTSEM,
                                                               ctMatrices = ctMatrices)
 
-  fit_lavaan <- lavaan::sem(model = clpm$model,
-                            data = clpm$data,
-                            do.fit = FALSE,
-                            missing = "ml",
-                            meanstructure = TRUE)
+  fit_lavaan <- lavaan::lavaan(model = clpm$model,
+                               data = clpm$data,
+                               do.fit = do.fit,
+                               missing = missing,
+                               meanstructure = meanstructure,
+                               ...)
   return(list(
     lavaanModel = fit_lavaan,
     transformation = transformations$transformation,
