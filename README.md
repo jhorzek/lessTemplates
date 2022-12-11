@@ -9,6 +9,7 @@ are:
 
 1.  cross-lagged panel models (with random intercepts).
 2.  continuous time structural equation models.
+3.  SEM with definition variables.
 
 Additionally, lessSEM also provides some transformations for these
 models which allow for regularizing specific model structures (e.g., to
@@ -34,6 +35,7 @@ The package includes vignettes to explain the main functions. See…
 2.  …
     `vignette(topic = "Continuous-Time-SEM", package = "lessTemplates")`
     for the continuous time structural equation model implementation.
+3. ... `?lessTemplates::SEMWithDefinitionVariables` for definition variables (there is currently no vignette for definition variables)
 
 ## Example
 
