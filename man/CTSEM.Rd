@@ -4,12 +4,23 @@
 \alias{CTSEM}
 \title{CTSEM}
 \usage{
-CTSEM(model, data)
+CTSEM(model, data, do.fit = FALSE, missing = "ml", meanstructure = TRUE, ...)
 }
 \arguments{
 \item{model}{syntax to specify the model}
 
 \item{data}{data set in long format with person and time for each observation}
+
+\item{do.fit}{argument passed to intermediary lavaan model. Setting to FALSE
+is recommended because this model will fail to fit in most cases}
+
+\item{missing}{argument passed to intermediary lavaan model. Set to "ml" for
+full information maximum likelihood}
+
+\item{meanstructure}{argument passed to intermediary lavaan model. Setting to TRUE
+is recommended}
+
+\item{...}{additional arguments passed to intermediary lavaan model}
 }
 \description{
 Set up a continuous time structural equation model with lessSEM
