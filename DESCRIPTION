@@ -12,7 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: dplyr
 Imports: tidyr, stringr, lessSEM, crayon, lavaan
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Suggests: 
     mvtnorm,
     stringr,
