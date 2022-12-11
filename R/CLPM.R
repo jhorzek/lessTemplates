@@ -492,6 +492,7 @@ CLPM <- function(model,
 
   rhsElements <- c()
   labels <- c()
+  rhs_prev <- rhs
   while(rhs != ""){
     label <- NULL
     rhsElement <- NULL
@@ -522,6 +523,10 @@ CLPM <- function(model,
 
     labels <- c(labels, label)
     rhsElements <- c(rhsElements, rhsElement)
+
+    if(rhs == rhs_prev)
+      stop("Got stuck on the following part: ", rhs)
+    rhs_prev <- rhs
   }
 
   separated <- data.frame(
