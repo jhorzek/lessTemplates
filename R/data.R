@@ -6,7 +6,7 @@
 
   dataWide <- tidyr::pivot_wider(data = data,
                                  names_from = occasion,
-                                 values_from = manifestNamesReduced,
+                                 values_from = all_of(manifestNamesReduced),
                                  values_fill = NA,
                                  names_sep = "_u",
                                  names_prefix = ifelse(length(manifestNamesReduced) == 1,
