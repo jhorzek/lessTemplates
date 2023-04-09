@@ -28,7 +28,7 @@ jobs:
                            repos = 'http://cran.rstudio.com/')
       shell: Rscript {0}
     - name: install lessTemplates
-      run: devtools::install(pkg = ".", binary = TRUE)
+      run: devtools::install(pkg = ".")
       shell: Rscript {0}
     - name: check lessTemplates
       run: rcmdcheck::rcmdcheck(path = ".", args = "--no-manual", error_on = "warning")
