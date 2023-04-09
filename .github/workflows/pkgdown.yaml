@@ -18,14 +18,17 @@ jobs:
     - uses: actions/checkout@v3
     - uses: r-lib/actions/setup-pandoc@v2
     - name: Install dependencies
-      run: install.packages(c("devtools", "pkgdown", "lessSEM", "rcmdcheck"),
-                            dependencies = c("Depends", 
+      run:  |
+          # installing all dependencies one by one while also checking if they could be loaded
+          options(install.packages.compile.from.source = "never")
+          install.packages(c("devtools", "pkgdown", "lessSEM", "rcmdcheck", "ctsemOMX", "crayon", "testthat"),
+                           dependencies = c("Depends", 
                                              "Imports", 
                                              "LinkingTo"),
-                            repos = 'http://cran.rstudio.com/')
+                           repos = 'http://cran.rstudio.com/')
       shell: Rscript {0}
     - name: install lessTemplates
-      run: devtools::install(pkg = ".", binary = TRUE)
+      run: devtools::install(pkg = ".")
       shell: Rscript {0}
     - name: check lessTemplates
       run: rcmdcheck::rcmdcheck(path = ".", args = "--no-manual", error_on = "warning")
