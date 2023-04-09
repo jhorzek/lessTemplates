@@ -21,10 +21,14 @@ jobs:
     - uses: actions/checkout@v3
     - uses: r-lib/actions/setup-pandoc@v2
     - name: Install dependencies
-      run: install.packages(c("devtools", "pkgdown", "lessSEM"))
+      run: install.packages(c("devtools", "pkgdown", "lessSEM", "rcmdcheck"))
       shell: Rscript {0}
     - name: install lessTemplates
-      run: R CMD INSTALL --preclean --no-multiarch --with-keep.source . 
+      run: devtools::install(pkg = ".", binary = TRUE)
+      shell: Rscript {0}
+    - name: check lessTemplates
+      run: rcmdcheck::rcmdcheck(path = ".", args = "--no-manual", error_on = "warning")
+      shell: Rscript {0}
     - name: Build site
       run: pkgdown::build_site_github_pages(new_process = FALSE, examples = FALSE, install = FALSE)
       shell: Rscript {0}
