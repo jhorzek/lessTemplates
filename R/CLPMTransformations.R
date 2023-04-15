@@ -3,13 +3,17 @@
 #' Transform the parameters of a CLPM model. Returns a string with the
 #' transformations to be passed to lessSEM.
 #' @param CLPM model created with CLPM function
-#' @param parameters names of the parameters which should be transformed. Note: Should be of form p_(u)
-#' @param transformation which transformation should be used? Currently supported: "changepoint", or "measurementInvariance"
-#' @return list with (1) transformation: string to be passed to lessSEM as transformation and (2) regularized: vector specifying which parameters should be regularized.
+#' @param parameters names of the parameters which should be transformed.
+#' Note: Should be of form p_(u)
+#' @param transformation which transformation should be used? Currently supported:
+#' "changepoint", or "measurementInvariance"
+#' @return list with (1) transformation: string to be passed to lessSEM as
+#' transformation and (2) regularized: vector specifying which parameters should be regularized.
 #' @examples
 #' # The following simulation and analysis of a random intercept cross-lagged panel model
-#' # is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
-#' # Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+#' # is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021)
+#' # Three Extensions of the Random Intercept Cross-Lagged Panel Model,
+#' # Structural Equation Modeling: A Multidisciplinary Journal,
 #' # 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
 #' #
 #' # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
@@ -62,10 +66,12 @@
 #' # all stay the same over time (e.g, a11_u1 = a11_u2 = a11_u3 = a11_u4 = a11_u5).
 #' # In practice, however, we won't know that. In the following, we will test this
 #' # automatically
-#' transform <- lessTemplates::transformCLPM(CLPM = m,
-#'                                                 parameters = c("a11_(u)", "a12_(u)", "a21_(u)", "a22_(u)"),
-#'                                                 # check measurement invariance of these parameters:
-#'                                                 transformation = "measurementInvariance")
+#' transform <- lessTemplates::transformCLPM(
+#'   CLPM = m,
+#'   parameters = c("a11_(u)", "a12_(u)", "a21_(u)", "a22_(u)"),
+#'   # check measurement invariance of these parameters:
+#'   transformation = "measurementInvariance")
+#'
 #' # fit using lasso regularization:
 #' lf <- lasso(lavaanModel = fit,
 #'             regularized = transform$regularized,

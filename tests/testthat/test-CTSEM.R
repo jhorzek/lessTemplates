@@ -48,7 +48,7 @@ eta2(0) ~ 1
   # comparison
   AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
                            Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
-  AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = T)
+  AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = TRUE)
 
   testthat::expect_equal(abs(AnomAuthfit$mxobj$fitfunction$result[[1]] - fit@fits$m2LL[1]) < 1e-1, TRUE)
   testthat::expect_equal(all(abs(AnomAuthfit$mxobj$DRIFT$values - ctsem$transformationList$DRIFT) < 1e-1), TRUE)

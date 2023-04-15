@@ -28,7 +28,7 @@ transformCTSEM <- function(CTSEM,
                                          pattern = "\\(t\\)",
                                          replacement = "_\\(u\\)")
 
-  transformationCLPM <- lessTemplates::transformCLPM(CLPM = ctsem$internal$clpm,
+  transformationCLPM <- lessTemplates::transformCLPM(CLPM = CTSEM$internal$clpm,
                                                      parameters = parameters,
                                                      transformation = transformation)
 

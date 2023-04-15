@@ -1,7 +1,7 @@
 Package: lessTemplates
 Type: Package
 Title: Provides transformation for use in lessSEM
-Version: 0.1.0
+Version: 0.1.2
 Author: Jannik H. Orzek
 Maintainer: Jannik H. Orzek <orzek@mpib-berlin.mpg.de>
 Description: lessTemplates provides convenience functions which allow for 
@@ -9,16 +9,14 @@ Description: lessTemplates provides convenience functions which allow for
     lessSEM package. 
 License: GPL (>= 2)
 Encoding: UTF-8
-LazyData: true
-Depends: dplyr
-Imports: tidyr, stringr, lessSEM, crayon, lavaan
+Imports: lessSEM, tidyr, stringr, crayon, lavaan, methods, stats, rlang
 RoxygenNote: 7.2.3
 Suggests: 
     mvtnorm,
-    stringr,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
+    OpenMx,
     ctsemOMX
 Config/testthat/edition: 3
 VignetteBuilder: knitr

@@ -6,6 +6,9 @@
 \usage{
 simulateExample1(seed = 123)
 }
+\arguments{
+\item{seed}{seed used to simulate data}
+}
 \value{
 list with data and model
 }
