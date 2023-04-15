@@ -1,0 +1,306 @@
+---
+title: "Continuous-Time-SEM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Continuous-Time-SEM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include=FALSE}
+library(lessTemplates)
+library(lavaan)
+library(lessSEM)
+library(ctsemOMX)
+set.seed(123)
+```
+
+**lessTemplates** also allows for implementing continuous time structural 
+euqation models (CTSEM; Voelkle et al., 2012; Driver et al., 2017). This model
+allows for unequally spaced measurement occasions in longitudinal data sets by
+relying on the assumption that the dyanmical processes can be explained using stochastic
+differential equations. The model is given by
+
+\begin{equation}
+\text d\pmb \eta(t) = \pmb A \pmb \eta(t)\text dt + \pmb G \text d \pmb W(t).
+\label{eqn:ctsem}
+\end{equation}
+
+$\pmb \eta(t)$ is a vector of latent states at time point $t$, $\pmb A$ is the
+drift-matrix with auto-effects in the diagonal and cross-effects in the off-diagonal, 
+and $\pmb W(t)$ is a Wiener process vector. $\pmb G$ is the diffusion matrix which
+influences the variance-covariance matrix of the latent residuals. A thorough
+introduction is, for instance, provided by Voelkle et al. (2012).
+
+Please note that the R packages [**ctsem**](https://github.com/driveraus/ctsem) 
+and [**ctsemOMX**](https://github.com/driveraus/ctsemOMX) (Driver et al., 2017)
+provide more stable implementations of CTSEM and [**regCtsem**](https://github.com/jhorzek/regCtsem)
+is a specialized package which allows for regularization of such models (Orzek & Voelkle, In Press).
+In practice, you may find that **ctsem** and **regCtsem** are faster than the implementation
+in **lessTemplates**. The objective of the CTSEM implementation in **lessTemplates**
+is to show the versatility of **lessSEM**, not to provide an alternative to
+existing implementations.
+
+## The Data Set
+
+**lessTemplates** expects the data to be given in long format, with a column
+named `person` and a column named `time`. We will use the `AnomAuth` data set in
+the following (Voelkle et al., 2012; Driver et al., 2017):
+```{r}
+library(ctsemOMX)
+data("AnomAuth")
+head(AnomAuth)
+```
+Note that the data is in long format, not in wide format. We can transform the
+data set using **ctsemOMX**:
+
+```{r}
+# from long to wide
+data <- ctWideToLong(datawide = AnomAuth,
+                     Tpoints= 5,
+                     n.manifest=2,
+                     manifestNames = c("Y1", "Y2"))
+data <- ctDeintervalise(datalong = data, 
+                        id='id', 
+                        dT='dT')
+colnames(data) <- c("person", "time", "Y1", "Y2")
+data <- as.data.frame(data)
+data <- data[!(is.na(data$Y1) & is.na(data$Y2)),]
+head(data)
+```
+
+## Specifying the CTSEM
+
+The model syntax is similar to the mathematical notation shown in the equations above.
+
+```{r}
+model <- "
+# Specify the latent dynamics in differential equation model notation:
+d_eta1(t) ~ eta1(t) + eta2(t)
+d_eta2(t) ~ eta1(t) + eta2(t)
+
+# Covariances (Wiener process)
+d_eta1(t) ~~ d_eta1(t) + d_eta2(t)
+d_eta2(t) ~~ d_eta2(t)
+
+# Latent intercepts
+eta1(0) ~ 1
+eta2(0) ~ 1
+
+# Measurement model
+eta1(t) =~ 1*Y1(t)
+eta2(t) =~ 1*Y2(t)
+
+# Manifest variances and covariances
+Y1(t) ~~ 0*Y1(t) + 0*Y2(t)
+Y2(t) ~~ 0*Y2(t)
+
+# Manifest intercepts
+Y1(t) ~ m1*1
+Y2(t) ~ m2*1
+"
+```
+Note the special notation:
+
+1. A variable starting with `d_` is assumed to be a differential that is predicted
+using the current states of the latent variables.
+2. If a variable is time-dependent, this is denoted with the special operator `(t)`.
+
+Currently, we can only use latent, time-dependent variables as predictors in the 
+dynamical equations. The following is not allowed: `d_eta1(t) ~ eta1(t) + kappa`.
+This is because `kappa` is not time-dependent.
+
+## Using `CTSEM` to build the model
+
+CTSEM is implemented in **lessTemplates** using the transformations of **lessSEM**
+(see `vignette(topic = "Parameter-transformations", package = "lessSEM")` for more
+details).
+
+```{r}
+ctsem <- CTSEM(model = model, 
+               data = data)
+names(ctsem)
+```
+The created object has two elements of relevance in the following: A lavaan object
+(`lavaanModel`) and the transformations necessary to build a CTSEM from this lavaan 
+object (`transformation`). 
+
+<details>
+<summary>Show lavaan model details</summary>
+```{r}
+summary(ctsem$lavaanModel)
+```
+</details>
+
+<details>
+<summary>Show transformation details</summary>
+```{r}
+cat(ctsem$transformation)
+# the following list contains elements referenced in the transformations:
+print(ctsem$transformationList)
+```
+</details>
+
+## Fitting the model with **lessSEM**
+
+To estimate the model, we can use any of the optimizers within **lessSEM**. If
+no regularization is required, we can use the `bfgs` function:
+```{r,include=FALSE}
+library(lessSEM)
+
+fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
+            modifyModel = modifyModel(transformations = ctsem$transformation,
+                                      transformationList = ctsem$transformationList))
+```
+```{r,eval=FALSE}
+library(lessSEM)
+
+fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
+            modifyModel = modifyModel(transformations = ctsem$transformation,
+                                      transformationList = ctsem$transformationList))
+```
+The parameter estimates are given by
+```{r}
+coef(fit)
+```
+Note that `CTSEM` automatically estimates the initial covariances and means separately
+from all other covariances and means. Furthermore, the diagonal elements of the 
+diffusion matrix are automatically log-transformed to prevent negative variances.
+The final values of the drift and diffusion matrices can also be found in the 
+`ctsem$transformationList` object, which has been changed by reference in C++:
+
+```{r}
+# DRIFT:
+print(ctsem$transformationList$DRIFT)
+
+# DIFFUSION:
+print(ctsem$transformationList$DIFFUSION)
+```
+
+
+<details>
+<summary>Compare to **ctsemOMX**</summary>
+The following is copied directly from `?ctsemOMX::ctFit`
+```{r}
+AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), 
+                                         nrow = 2, 
+                                         ncol = 2), 
+                         Tpoints = 5, 
+                         n.latent = 2, 
+                         n.manifest = 2, 
+                         MANIFESTVAR=diag(0, 2), 
+                         TRAITVAR = NULL) 
+AnomAuthfit <- ctFit(AnomAuth, 
+                     AnomAuthmodel)
+summary(AnomAuthfit)
+```
+</details>
+
+## Adding a Random Intercept
+
+Similar to the RI-CLPM (Hamaker et al., 2015), we can specify a random intercept in CTSEM as well
+(Driver et al., 2017):
+
+```{r}
+modelRI <- "
+# Specify the latent dynamics in differential equation model notation:
+d_eta1(t) ~ eta1(t) + eta2(t)
+d_eta2(t) ~ eta1(t) + eta2(t)
+
+# Covariances (Wiener process)
+d_eta1(t) ~~ d_eta1(t) + d_eta2(t)
+d_eta2(t) ~~ d_eta2(t)
+
+# Latent intercepts
+eta1(0) ~ 1
+eta2(0) ~ 1
+
+# Measurement model
+eta1(t) =~ 1*Y1(t)
+eta2(t) =~ 1*Y2(t)
+
+# Manifest variances and covariances
+Y1(t) ~~ 0*Y1(t) + 0*Y2(t)
+Y2(t) ~~ 0*Y2(t)
+
+# Manifest intercepts
+Y1(t) ~ m1*1
+Y2(t) ~ m2*1
+
+# Add random intercepts
+RI1 =~ 1*Y1(t)
+RI2 =~ 1*Y2(t)
+
+RI1 ~~ RI1 + RI2
+RI2 ~~ RI2
+"
+```
+
+```{r,include=FALSE}
+ctsemRI <- CTSEM(model = modelRI, 
+                 data = data)
+fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
+              modifyModel = modifyModel(transformations = ctsemRI$transformation,
+                                        transformationList = ctsemRI$transformationList),
+              control = controlBFGS(breakOuter = 1e-10))
+```
+```{r,eval=FALSE}
+ctsemRI <- CTSEM(model = modelRI, 
+                 data = data)
+fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
+              modifyModel = modifyModel(transformations = ctsemRI$transformation,
+                                        transformationList = ctsemRI$transformationList),
+              control = controlBFGS(breakOuter = 1e-10))
+```
+The parameter estimates are given by
+```{r}
+coef(fitRI)
+
+# DRIFT:
+print(ctsemRI$transformationList$DRIFT)
+
+# DIFFUSION:
+print(ctsemRI$transformationList$DIFFUSION)
+```
+We can compare the model with and the model without random intercepts using
+the information criteria implemented in **lessSEM**:
+
+```{r}
+AIC(fit)
+AIC(fitRI)
+```
+Note that the random-intercept CTSEM outperforms the CTSEM in terms of the AIC.
+
+<details>
+<summary>Compare to **ctsemOMX**</summary>
+The following is copied and adapted directly from `?ctsemOMX::ctFit`
+```{r}
+AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), 
+                                         nrow = 2, 
+                                         ncol = 2), 
+                         Tpoints = 5, 
+                         n.latent = 2, 
+                         n.manifest = 2, 
+                         MANIFESTVAR=diag(0, 2), 
+                         TRAITVAR = NULL,
+                         MANIFESTTRAITVAR = "auto" # add random intercepts
+) 
+AnomAuthfit <- ctFit(AnomAuth, 
+                     AnomAuthmodel)
+print(AnomAuthfit$mxobj$DRIFT$values)
+```
+</details>
+
+## Bibliography
+
+- Driver, C. C., Oud, J. H. L., & Voelkle, M. C. (2017). Continuous Time Structural Equation Modelling With R Package ctsem. Journal of Statistical Software, 77(5), 1–36. https://doi.org/10.18637/jss.v077.i05
+- Hamaker, E. L., Kuiper, R. M., & Grasman, R. P. P. P. (2015). A critique of the cross-lagged panel model. Psychological Methods, 20(1), 102–116. https://doi.org/10.1037/a0038889
+- Orzek, J. H., & Voelkle, M. C. (In Press). Regularized Continuous Time Dynamic Networks. Psychological Methods.
+- Voelkle, M. C., Oud, J. H. L., Davidov, E., & Schmidt, P. (2012). An SEM Approach to Continuous Time Modeling of Panel Data: Relating Authoritarianism and Anomia. Psychological Methods, 17(2), 176–192. https://doi.org/10.1037/a0027543

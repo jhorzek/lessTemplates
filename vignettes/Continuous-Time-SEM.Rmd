@@ -7,20 +7,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
 
-```{r setup, include=FALSE}
-library(lessTemplates)
-library(lavaan)
-library(lessSEM)
-library(ctsemOMX)
-set.seed(123)
-```
+
+
 
 **lessTemplates** also allows for implementing continuous time structural 
 euqation models (CTSEM; Voelkle et al., 2012; Driver et al., 2017). This model
@@ -53,15 +42,24 @@ existing implementations.
 **lessTemplates** expects the data to be given in long format, with a column
 named `person` and a column named `time`. We will use the `AnomAuth` data set in
 the following (Voelkle et al., 2012; Driver et al., 2017):
-```{r}
+
+```r
 library(ctsemOMX)
 data("AnomAuth")
 head(AnomAuth)
+#>   Y1_T0 Y2_T0 Y1_T1 Y2_T1 Y1_T2 Y2_T2 Y1_T3 Y2_T3 Y1_T4 Y2_T4 dT1 dT2 dT3 dT4
+#> 1  2.67  3.50  3.33   3.5    NA    NA    NA    NA    NA    NA   1   1   2   2
+#> 2  3.33  3.25    NA    NA    NA    NA    NA    NA    NA    NA   1   1   2   2
+#> 3  3.33  2.75  3.33   3.0  3.33   2.5  2.33     3  2.33     3   1   1   2   2
+#> 4  3.33  3.25    NA    NA    NA    NA    NA    NA    NA    NA   1   1   2   2
+#> 5  4.00  4.00    NA    NA    NA    NA    NA    NA    NA    NA   1   1   2   2
+#> 6  3.67  4.00    NA    NA    NA    NA  4.00     4  4.00     4   1   1   2   2
 ```
 Note that the data is in long format, not in wide format. We can transform the
 data set using **ctsemOMX**:
 
-```{r}
+
+```r
 # from long to wide
 data <- ctWideToLong(datawide = AnomAuth,
                      Tpoints= 5,
@@ -70,17 +68,26 @@ data <- ctWideToLong(datawide = AnomAuth,
 data <- ctDeintervalise(datalong = data, 
                         id='id', 
                         dT='dT')
+#> Converting intervals to absolute time:  Any missing intervals on 1st row of each subject are assumed to occur at earliest measurement time (0), any other missing intervals render subsequent intervals for the subject unusable so time variables are set NA
 colnames(data) <- c("person", "time", "Y1", "Y2")
 data <- as.data.frame(data)
 data <- data[!(is.na(data$Y1) & is.na(data$Y2)),]
 head(data)
+#>    person time   Y1   Y2
+#> 1       1    0 2.67 3.50
+#> 2       1    1 3.33 3.50
+#> 6       2    0 3.33 3.25
+#> 11      3    0 3.33 2.75
+#> 12      3    1 3.33 3.00
+#> 13      3    2 3.33 2.50
 ```
 
 ## Specifying the CTSEM
 
 The model syntax is similar to the mathematical notation shown in the equations above.
 
-```{r}
+
+```r
 model <- "
 # Specify the latent dynamics in differential equation model notation:
 d_eta1(t) ~ eta1(t) + eta2(t)
@@ -123,10 +130,14 @@ CTSEM is implemented in **lessTemplates** using the transformations of **lessSEM
 (see `vignette(topic = "Parameter-transformations", package = "lessSEM")` for more
 details).
 
-```{r}
+
+```r
 ctsem <- CTSEM(model = model, 
                data = data)
+#> 
+#> Setting up a continuous time structural equation model.
 names(ctsem)
+#> [1] "lavaanModel"        "transformation"     "transformationList" "internal"
 ```
 The created object has two elements of relevance in the following: A lavaan object
 (`lavaanModel`) and the transformations necessary to build a CTSEM from this lavaan 
@@ -134,17 +145,193 @@ object (`transformation`).
 
 <details>
 <summary>Show lavaan model details</summary>
-```{r}
+
+```r
 summary(ctsem$lavaanModel)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
 <details>
 <summary>Show transformation details</summary>
-```{r}
+
+```r
 cat(ctsem$transformation)
+#> parameters: drift_d_eta1_eta1, log_diffusion_d_eta1_d_eta1, drift_d_eta1_eta2, diffusion_d_eta1_d_eta2, drift_d_eta2_eta1, drift_d_eta2_eta2, log_diffusion_d_eta2_d_eta2, arcl_1_1_u2, arcl_2_1_u2, arcl_1_2_u2, arcl_2_2_u2, cov_1_1_u2, cov_2_1_u2, cov_2_2_u2, arcl_1_1_u3, arcl_2_1_u3, arcl_1_2_u3, arcl_2_2_u3, cov_1_1_u3, cov_2_1_u3, cov_2_2_u3, arcl_1_1_u4, arcl_2_1_u4, arcl_1_2_u4, arcl_2_2_u4, cov_1_1_u4, cov_2_1_u4, cov_2_2_u4, arcl_1_1_u5, arcl_2_1_u5, arcl_1_2_u5, arcl_2_2_u5, cov_1_1_u5, cov_2_1_u5, cov_2_2_u5
+#> start: drift_d_eta1_eta1 = -0.45, log_diffusion_d_eta1_d_eta1 = 0.2, drift_d_eta1_eta2 = -0.05, diffusion_d_eta1_d_eta2 = 0.1, drift_d_eta2_eta1 = -0.05, drift_d_eta2_eta2 = -0.45, log_diffusion_d_eta2_d_eta2 = 0.2
+#> 
+#> double tmpvalue = 0.0;
+#> bool DRIFTChanged = false;
+#> arma::mat DRIFT = transformationList["DRIFT"];
+#> 
+#> tmpvalue = DRIFT(0,0);
+#> if(tmpvalue != drift_d_eta1_eta1){
+#>  DRIFTChanged = true;
+#>  DRIFT(0,0) = drift_d_eta1_eta1;
+#> 
+#> }
+#>                            
+#> tmpvalue = DRIFT(0,1);
+#> if(tmpvalue != drift_d_eta1_eta2){
+#>  DRIFTChanged = true;
+#>  DRIFT(0,1) = drift_d_eta1_eta2;
+#> 
+#> }
+#>                            
+#> tmpvalue = DRIFT(1,0);
+#> if(tmpvalue != drift_d_eta2_eta1){
+#>  DRIFTChanged = true;
+#>  DRIFT(1,0) = drift_d_eta2_eta1;
+#> 
+#> }
+#>                            
+#> tmpvalue = DRIFT(1,1);
+#> if(tmpvalue != drift_d_eta2_eta2){
+#>  DRIFTChanged = true;
+#>  DRIFT(1,1) = drift_d_eta2_eta2;
+#> 
+#> }
+#>                            
+#> if(DRIFTChanged) {transformationList["DRIFT"] = DRIFT;}
+#> arma::mat driftHash = transformationList["driftHash"];
+#> if(DRIFTChanged){
+#>  driftHash = kron(DRIFT, arma::eye(2,2))+ kron(arma::eye(2,2), DRIFT);
+#> transformationList["driftHash"] = driftHash;
+#> }
+#> bool logDiagDIFFUSIONChanged = false;
+#> arma::mat logDiagDIFFUSION = transformationList["logDiagDIFFUSION"];
+#> arma::mat DIFFUSION = transformationList["DIFFUSION"];
+#> tmpvalue = logDiagDIFFUSION(0,0);
+#> if(tmpvalue != log_diffusion_d_eta1_d_eta1){
+#>  logDiagDIFFUSIONChanged = true;
+#>  logDiagDIFFUSION(0,0) = log_diffusion_d_eta1_d_eta1;
+#> 
+#> }
+#> 
+#> tmpvalue = logDiagDIFFUSION(0,1);
+#> if(tmpvalue != diffusion_d_eta1_d_eta2){
+#>  logDiagDIFFUSIONChanged = true;
+#>  logDiagDIFFUSION(0,1) = diffusion_d_eta1_d_eta2;
+#> 
+#> }
+#> 
+#> tmpvalue = logDiagDIFFUSION(1,0);
+#> if(tmpvalue != diffusion_d_eta1_d_eta2){
+#>  logDiagDIFFUSIONChanged = true;
+#>  logDiagDIFFUSION(1,0) = diffusion_d_eta1_d_eta2;
+#> 
+#> }
+#> 
+#> tmpvalue = logDiagDIFFUSION(1,1);
+#> if(tmpvalue != log_diffusion_d_eta2_d_eta2){
+#>  logDiagDIFFUSIONChanged = true;
+#>  logDiagDIFFUSION(1,1) = log_diffusion_d_eta2_d_eta2;
+#> 
+#> }
+#> 
+#> if(logDiagDIFFUSIONChanged){transformationList["logDiagDIFFUSION"] = logDiagDIFFUSION;DIFFUSION = logDiagDIFFUSION;DIFFUSION.diag() = arma::exp(logDiagDIFFUSION.diag());transformationList["DIFFUSION"] = DIFFUSION;}
+#> arma::mat ARCL_2 = transformationList["ARCL_2"];
+#> if(DRIFTChanged){
+#>  ARCL_2 =  arma::expmat(DRIFT*1);
+#>  transformationList["ARCL_2"] = ARCL_2;
+#> }
+#> 
+#> arma::mat LVCOV_2 = transformationList["LVCOV_2"];
+#> if(DRIFTChanged | logDiagDIFFUSIONChanged){
+#>  LVCOV_2 = arma::reshape(arma::inv(driftHash) * (arma::expmat(driftHash*1) - arma::eye(arma::size(arma::expmat(driftHash*1))))*arma::vectorise(DIFFUSION),2,2);
+#> transformationList["LVCOV_2"] = LVCOV_2;
+#> }
+#> 
+#>                           
+#> arcl_1_1_u2 = ARCL_2(0,0);
+#> arcl_1_2_u2 = ARCL_2(0,1);
+#> arcl_2_1_u2 = ARCL_2(1,0);
+#> arcl_2_2_u2 = ARCL_2(1,1);
+#> cov_1_1_u2 = log(LVCOV_2(0,0));
+#> cov_2_1_u2 = LVCOV_2(0,1);
+#> cov_2_1_u2 = LVCOV_2(1,0);
+#> cov_2_2_u2 = log(LVCOV_2(1,1));
+#> arcl_1_1_u3 = ARCL_2(0,0);
+#> arcl_1_2_u3 = ARCL_2(0,1);
+#> arcl_2_1_u3 = ARCL_2(1,0);
+#> arcl_2_2_u3 = ARCL_2(1,1);
+#> cov_1_1_u3 = log(LVCOV_2(0,0));
+#> cov_2_1_u3 = LVCOV_2(0,1);
+#> cov_2_1_u3 = LVCOV_2(1,0);
+#> cov_2_2_u3 = log(LVCOV_2(1,1));
+#> arma::mat ARCL_3 = transformationList["ARCL_3"];
+#> if(DRIFTChanged){
+#>  ARCL_3 =  arma::expmat(DRIFT*2);
+#>  transformationList["ARCL_3"] = ARCL_3;
+#> }
+#> 
+#> arma::mat LVCOV_3 = transformationList["LVCOV_3"];
+#> if(DRIFTChanged | logDiagDIFFUSIONChanged){
+#>  LVCOV_3 = arma::reshape(arma::inv(driftHash) * (arma::expmat(driftHash*2) - arma::eye(arma::size(arma::expmat(driftHash*2))))*arma::vectorise(DIFFUSION),2,2);
+#> transformationList["LVCOV_3"] = LVCOV_3;
+#> }
+#> 
+#>                           
+#> arcl_1_1_u4 = ARCL_3(0,0);
+#> arcl_1_2_u4 = ARCL_3(0,1);
+#> arcl_2_1_u4 = ARCL_3(1,0);
+#> arcl_2_2_u4 = ARCL_3(1,1);
+#> cov_1_1_u4 = log(LVCOV_3(0,0));
+#> cov_2_1_u4 = LVCOV_3(0,1);
+#> cov_2_1_u4 = LVCOV_3(1,0);
+#> cov_2_2_u4 = log(LVCOV_3(1,1));
+#> arcl_1_1_u5 = ARCL_3(0,0);
+#> arcl_1_2_u5 = ARCL_3(0,1);
+#> arcl_2_1_u5 = ARCL_3(1,0);
+#> arcl_2_2_u5 = ARCL_3(1,1);
+#> cov_1_1_u5 = log(LVCOV_3(0,0));
+#> cov_2_1_u5 = LVCOV_3(0,1);
+#> cov_2_1_u5 = LVCOV_3(1,0);
+#> cov_2_2_u5 = log(LVCOV_3(1,1));
 # the following list contains elements referenced in the transformations:
 print(ctsem$transformationList)
+#> $DRIFT
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $logDiagDIFFUSION
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $DIFFUSION
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $driftHash
+#>      [,1] [,2] [,3] [,4]
+#> [1,]    1    0    0    0
+#> [2,]    0    1    0    0
+#> [3,]    0    0    1    0
+#> [4,]    0    0    0    1
+#> 
+#> $ARCL_2
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $ARCL_3
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $LVCOV_2
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
+#> 
+#> $LVCOV_3
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    0    0
 ```
 </details>
 
@@ -152,14 +339,9 @@ print(ctsem$transformationList)
 
 To estimate the model, we can use any of the optimizers within **lessSEM**. If
 no regularization is required, we can use the `bfgs` function:
-```{r,include=FALSE}
-library(lessSEM)
 
-fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
-            modifyModel = modifyModel(transformations = ctsem$transformation,
-                                      transformationList = ctsem$transformationList))
-```
-```{r,eval=FALSE}
+
+```r
 library(lessSEM)
 
 fit <- bfgs(lavaanModel = ctsem$lavaanModel, 
@@ -167,8 +349,27 @@ fit <- bfgs(lavaanModel = ctsem$lavaanModel,
                                       transformationList = ctsem$transformationList))
 ```
 The parameter estimates are given by
-```{r}
+
+```r
 coef(fit)
+#>                                                                                                      
+#>   Tuning         ||--||     Estimates                                                                
+#>  ------- ------- ||--|| ------------- ------------- ------------- ---------- ---------- -------------
+#>   lambda   alpha ||--|| initialCov_11 initialCov_21 initialCov_22         m1         m2 initialMean_1
+#>  ======= ======= ||--|| ============= ============= ============= ========== ========== =============
+#>   0.0000  0.0000 ||--||        0.6325        0.2442        0.4573     2.6863     2.8623       -0.1831
+#>                                                                               
+#>                                                                               
+#>  ------------- ----------------- --------------------------- -----------------
+#>  initialMean_2 drift_d_eta1_eta1 log_diffusion_d_eta1_d_eta1 drift_d_eta1_eta2
+#>  ============= ================= =========================== =================
+#>        -0.0199           -0.4476                     -0.7481            0.2326
+#>                                                                                         
+#>                                                                                         
+#>  ----------------------- ----------------- ----------------- ---------------------------
+#>  diffusion_d_eta1_d_eta2 drift_d_eta2_eta1 drift_d_eta2_eta2 log_diffusion_d_eta2_d_eta2
+#>  ======================= ================= ================= ===========================
+#>                  -0.0046            0.0432           -0.1179                     -1.8667
 ```
 Note that `CTSEM` automatically estimates the initial covariances and means separately
 from all other covariances and means. Furthermore, the diagonal elements of the 
@@ -176,19 +377,27 @@ diffusion matrix are automatically log-transformed to prevent negative variances
 The final values of the drift and diffusion matrices can also be found in the 
 `ctsem$transformationList` object, which has been changed by reference in C++:
 
-```{r}
+
+```r
 # DRIFT:
 print(ctsem$transformationList$DRIFT)
+#>             [,1]       [,2]
+#> [1,] -0.44755458  0.2326031
+#> [2,]  0.04324513 -0.1179156
 
 # DIFFUSION:
 print(ctsem$transformationList$DIFFUSION)
+#>              [,1]         [,2]
+#> [1,]  0.473273089 -0.004562621
+#> [2,] -0.004562621  0.154629254
 ```
 
 
 <details>
 <summary>Compare to **ctsemOMX**</summary>
 The following is copied directly from `?ctsemOMX::ctFit`
-```{r}
+
+```r
 AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), 
                                          nrow = 2, 
                                          ncol = 2), 
@@ -197,9 +406,116 @@ AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1),
                          n.manifest = 2, 
                          MANIFESTVAR=diag(0, 2), 
                          TRAITVAR = NULL) 
+#> Type "omx" is still supported but requires ctsemOMX package installation. "stanct" or "standt" are recommended types.
 AnomAuthfit <- ctFit(AnomAuth, 
                      AnomAuthmodel)
+#> wide format data detected
+#> Running ctsemCarefulFit with 14 parameters
+#> Beginning initial fit attemptFit attempt 0, fit=23415.9290488424, new current best! (was 85223.1449534199)                                                                             
+#> 
+#>  Solution found!  Final fit=23415.929 (started at 85223.145)  (1 attempt(s): 1 valid, 0 errors)
 summary(AnomAuthfit)
+#> $LAMBDA
+#>    eta1 eta2
+#> Y1    1    0
+#> Y2    0    1
+#> 
+#> $DRIFT
+#>             eta1       eta2
+#> eta1 -0.44728197  0.2324980
+#> eta2  0.04329277 -0.1174662
+#> 
+#> $MANIFESTVAR
+#>    Y1 Y2
+#> Y1  0  0
+#> Y2  0  0
+#> 
+#> $MANIFESTMEANS
+#>          [,1]
+#> [1,] 2.687441
+#> [2,] 2.863379
+#> 
+#> $CINT
+#>      [,1]
+#> eta1    0
+#> eta2    0
+#> 
+#> $DIFFUSION
+#>              eta1         eta2
+#> eta1  0.473241926 -0.004610143
+#> eta2 -0.004610143  0.154509563
+#> 
+#> $T0VAR
+#>           eta1      eta2
+#> eta1 0.6328612 0.2447309
+#> eta2 0.2447309 0.4575771
+#> 
+#> $T0MEANS
+#>             [,1]
+#> eta1 -0.18401189
+#> eta2 -0.02065634
+#> 
+#> $ctparameters
+#>                        Value        Matrix    StdError
+#> T0m_eta1        -0.184011892       T0MEANS 0.038353827
+#> T0m_eta2        -0.020656344       T0MEANS 0.050200907
+#> drift_eta1      -0.447281968         DRIFT 0.019876955
+#> drift_eta2_eta1  0.043292775         DRIFT 0.009630974
+#> drift_eta1_eta2  0.232497958         DRIFT 0.018058747
+#> drift_eta2      -0.117466175         DRIFT 0.008651637
+#> diff_eta1        0.473241926     DIFFUSION 0.015697557
+#> diff_eta2_eta1  -0.004610143     DIFFUSION 0.005495043
+#> diff_eta2        0.154509563     DIFFUSION 0.003846336
+#> T0var_eta1       0.632861194         T0VAR 0.017155858
+#> T0var_eta2_eta1  0.244730882         T0VAR 0.011330970
+#> T0var_eta2       0.457577148         T0VAR 0.012403718
+#> mm_Y1            2.687440513 MANIFESTMEANS 0.035190670
+#> mm_Y2            2.863378527 MANIFESTMEANS 0.048498098
+#> 
+#> $ctparammessage
+#> [1] "Note: Continuous time parameter estimates above are of the full variance-covariance matrices, not cholesky decompositions as used by ctModel."
+#> [2] "Note: Standard errors are approximated with delta method so are only rough approximations."                                                   
+#> 
+#> $omxsummary
+#> $omxsummary$modelName
+#> [1] "ctsem"
+#> 
+#> $omxsummary$wallTime
+#> Time difference of 0.2161429 secs
+#> 
+#> $omxsummary$mxVersion
+#> [1] '2.21.1'
+#> 
+#> $omxsummary$timestamp
+#> [1] "2023-04-15 13:16:26 CEST"
+#> 
+#> $omxsummary$estimatedParameters
+#> [1] 14
+#> 
+#> $omxsummary$CI
+#> data frame with 0 columns and 0 rows
+#> 
+#> $omxsummary$AIC.Mx
+#> [1] 23313.93
+#> 
+#> $omxsummary$BIC.Mx
+#> [1] 23012.56
+#> 
+#> $omxsummary$observedStatistics
+#> [1] 65
+#> 
+#> $omxsummary$<NA>
+#> NULL
+#> 
+#> $omxsummary$degreesOfFreedom
+#> [1] 51
+#> 
+#> $omxsummary$Minus2LogLikelihood
+#> [1] 23415.93
+#> 
+#> 
+#> $message
+#> [1] "For additional summary matrices and raw OpenMx parameter output, use argument verbose=TRUE"
 ```
 </details>
 
@@ -208,7 +524,8 @@ summary(AnomAuthfit)
 Similar to the RI-CLPM (Hamaker et al., 2015), we can specify a random intercept in CTSEM as well
 (Driver et al., 2017):
 
-```{r}
+
+```r
 modelRI <- "
 # Specify the latent dynamics in differential equation model notation:
 d_eta1(t) ~ eta1(t) + eta2(t)
@@ -243,15 +560,9 @@ RI2 ~~ RI2
 "
 ```
 
-```{r,include=FALSE}
-ctsemRI <- CTSEM(model = modelRI, 
-                 data = data)
-fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
-              modifyModel = modifyModel(transformations = ctsemRI$transformation,
-                                        transformationList = ctsemRI$transformationList),
-              control = controlBFGS(breakOuter = 1e-10))
-```
-```{r,eval=FALSE}
+
+
+```r
 ctsemRI <- CTSEM(model = modelRI, 
                  data = data)
 fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel, 
@@ -260,28 +571,65 @@ fitRI <- bfgs(lavaanModel = ctsemRI$lavaanModel,
               control = controlBFGS(breakOuter = 1e-10))
 ```
 The parameter estimates are given by
-```{r}
+
+```r
 coef(fitRI)
+#>                                                                                                   
+#>   Tuning         ||--||     Estimates                                                             
+#>  ------- ------- ||--|| ------------- ------------- ------------- ---------- ---------- ----------
+#>   lambda   alpha ||--|| initialCov_11 initialCov_21 initialCov_22   RI1~~RI1   RI1~~RI2   RI2~~RI2
+#>  ======= ======= ||--|| ============= ============= ============= ========== ========== ==========
+#>   0.0000  0.0000 ||--||        0.2621        0.0255        0.1819     0.3918     0.2222     0.2765
+#>                                                                                                 
+#>                                                                                                 
+#>  ---------- ---------- ------------- ------------- ----------------- ---------------------------
+#>          m1         m2 initialMean_1 initialMean_2 drift_d_eta1_eta1 log_diffusion_d_eta1_d_eta1
+#>  ========== ========== ============= ============= ================= ===========================
+#>      2.6904     2.8712       -0.1870       -0.0285           -2.4801                      0.1429
+#>                                                                               
+#>                                                                               
+#>  ----------------- ----------------------- ----------------- -----------------
+#>  drift_d_eta1_eta2 diffusion_d_eta1_d_eta2 drift_d_eta2_eta1 drift_d_eta2_eta2
+#>  ================= ======================= ================= =================
+#>             0.2723                  0.0083            0.0459           -0.2243
+#>                             
+#>                             
+#>  ---------------------------
+#>  log_diffusion_d_eta2_d_eta2
+#>  ===========================
+#>                      -1.7615
 
 # DRIFT:
 print(ctsemRI$transformationList$DRIFT)
+#>             [,1]       [,2]
+#> [1,] -2.48009327  0.2723427
+#> [2,]  0.04593049 -0.2242811
 
 # DIFFUSION:
 print(ctsemRI$transformationList$DIFFUSION)
+#>             [,1]        [,2]
+#> [1,] 1.153591820 0.008287112
+#> [2,] 0.008287112 0.171778894
 ```
 We can compare the model with and the model without random intercepts using
 the information criteria implemented in **lessSEM**:
 
-```{r}
+
+```r
 AIC(fit)
+#>   lambda alpha     m2LL  regM2LL nonZeroParameters convergence      AIC
+#> 1      0     0 23415.94 23415.94                14        TRUE 23443.94
 AIC(fitRI)
+#>   lambda alpha     m2LL  regM2LL nonZeroParameters convergence      AIC
+#> 1      0     0 22898.53 22898.53                17        TRUE 22932.53
 ```
 Note that the random-intercept CTSEM outperforms the CTSEM in terms of the AIC.
 
 <details>
 <summary>Compare to **ctsemOMX**</summary>
 The following is copied and adapted directly from `?ctsemOMX::ctFit`
-```{r}
+
+```r
 AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), 
                                          nrow = 2, 
                                          ncol = 2), 
@@ -292,9 +640,18 @@ AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1),
                          TRAITVAR = NULL,
                          MANIFESTTRAITVAR = "auto" # add random intercepts
 ) 
+#> Type "omx" is still supported but requires ctsemOMX package installation. "stanct" or "standt" are recommended types.
 AnomAuthfit <- ctFit(AnomAuth, 
                      AnomAuthmodel)
+#> wide format data detected
+#> Running ctsemCarefulFit with 17 parameters
+#> Beginning initial fit attemptFit attempt 0, fit=22898.5323204156, new current best! (was 85747.1332635326)                                                                             
+#> 
+#>  Solution found!  Final fit=22898.532 (started at 85747.133)  (1 attempt(s): 1 valid, 0 errors)
 print(AnomAuthfit$mxobj$DRIFT$values)
+#>             [,1]       [,2]
+#> [1,] -2.48022784  0.2723562
+#> [2,]  0.04594447 -0.2242828
 ```
 </details>
 

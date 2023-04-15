@@ -7,14 +7,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
 
-```{r setup}
+
+
+```r
 library(lessTemplates)
 library(lavaan)
 dataset <- lessTemplates::simulateRICLPM(seed = 123)
@@ -31,11 +27,17 @@ for the original source from which the following models were adapted.
 
 Throughout all of the following, we assume that the data set looks as follows:
 
-```{r,echo = FALSE}
-library(lessTemplates)
-library(lavaan)
-dataset <- simulateRICLPM(seed = 123)
-head(dataset)
+
+```
+#> # A tibble: 6 × 4
+#>   person occasion    y1     y2
+#>    <int> <chr>    <dbl>  <dbl>
+#> 1      1 1        2.10   1.04 
+#> 2      1 2        0.619  0.243
+#> 3      1 3        0.433 -0.579
+#> 4      1 4        0.266 -1.49 
+#> 5      1 5        0.239 -0.556
+#> 6      2 1        0.765  0.836
 ```
 Note that the first two variables are the person-indicator and the occasion indicator.
 These variables must have exactly those names: `person` and `occasion`. 
@@ -66,7 +68,8 @@ errors.
 Using **lessTemplates**, a CLPM with two latent variables measured by one indicator
 each can be specified as follows:
 
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ eta1_(u-1) + eta2_(u-1)
@@ -96,22 +99,42 @@ set, but followed by the subscript `_(u)`.
 
 Once the model is specified, it can be passed to the `CLPM` function:
 
-```{r}
+
+```r
 clpm <- lessTemplates::CLPM(model = model, 
                             data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 
+#> Names of the manifest variables: y1_u1 y2_u1 y1_u2 y2_u2 y1_u3 y2_u3 y1_u4 y2_u4 y1_u5 y2_u5 
+#> Returning lavaan syntax and data in wide format
 ```
 The `clpm` object will contain the syntax for **lavaan** as well as the data set
 in wide format to be used by **lavaan**:
 
-```{r}
+
+```r
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>  eta1_u2~eta1_u1  eta1_u2~eta2_u1  eta2_u2~eta1_u1  eta2_u2~eta2_u1  eta1_u3~eta1_u2  eta1_u3~eta2_u2 
+#>            0.691           -0.151            0.189            0.476            0.712           -0.135 
+#>  eta2_u3~eta1_u2  eta2_u3~eta2_u2  eta1_u4~eta1_u3  eta1_u4~eta2_u3  eta2_u4~eta1_u3  eta2_u4~eta2_u3 
+#>            0.119            0.603            0.766           -0.142            0.189            0.665 
+#>  eta1_u5~eta1_u4  eta1_u5~eta2_u4  eta2_u5~eta1_u4  eta2_u5~eta2_u4    initialCov_11    initialCov_21 
+#>            0.667           -0.088            0.076            0.560            1.291            0.563 
+#>    initialCov_22 eta1_u2~~eta1_u2 eta2_u2~~eta2_u2 eta1_u3~~eta1_u3 eta2_u3~~eta2_u3 eta1_u4~~eta1_u4 
+#>            1.509            0.348            0.439            0.379            0.405            0.286 
+#> eta2_u4~~eta2_u4 eta1_u5~~eta1_u5 eta2_u5~~eta2_u5 
+#>            0.297            0.250            0.433
 ```
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
@@ -121,7 +144,8 @@ Note that the `CLPM` function by default sets all parameters to be occasion-spec
 
 To constrain the autoregressive and cross-lagged parameters to equivalence over
 time, we have to assign a occasion-independent label to them:
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ a11*eta1_(u-1) + a12*eta2_(u-1)
@@ -144,17 +168,34 @@ Here, we constrain all autoregressive and cross-lagged parameters to equality ov
 time (because they all get the same label). The only exception is the cross-lagged effect
 of `eta1` on `eta2`, which is given the occasion-specific label `a21_(u)`.
 
-```{r}
+
+```r
 clpm <- lessTemplates::CLPM(model = model, 
                             data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 
+#> Names of the manifest variables: y1_u1 y2_u1 y1_u2 y2_u2 y1_u3 y2_u3 y1_u4 y2_u4 y1_u5 y2_u5 
+#> Returning lavaan syntax and data in wide format
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>           a11           a12        a21_u2           a22           a11           a12        a21_u3 
+#>         0.705        -0.135         0.150         0.563         0.705        -0.135         0.128 
+#>           a22           a11           a12        a21_u4           a22           a11           a12 
+#>         0.563         0.705        -0.135         0.200         0.563         0.705        -0.135 
+#>        a21_u5           a22 initialCov_11 initialCov_21 initialCov_22           v11           v22 
+#>         0.076         0.563         1.291         0.563         1.509         0.317         0.398 
+#>           v11           v22           v11           v22           v11           v22 
+#>         0.317         0.398         0.317         0.398         0.317         0.398
 ```
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
@@ -168,7 +209,8 @@ measurement occasions.
 If some parameters should be estimated occasion-specific, this can be
 achieved by re-defining specific equations as shown below:
 
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ a11*eta1_(u-1) + a12*eta2_(u-1)
@@ -194,18 +236,35 @@ y2_(u) ~~ 0*y2_(u)
 Here, the autoregressive and cross-lagged effects of measurement occasion 4
 differ from those of previous or subsequent measurement occasions.
 
-```{r}
+
+```r
 clpm <- lessTemplates::CLPM(model = model, 
                             data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 
+#> Names of the manifest variables: y1_u1 y2_u1 y1_u2 y2_u2 y1_u3 y2_u3 y1_u4 y2_u4 y1_u5 y2_u5 
+#> Returning lavaan syntax and data in wide format
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>           a11           a12           a21           a22           a11           a12           a21 
+#>         0.688        -0.130         0.141         0.564         0.688        -0.130         0.141 
+#>           a22         a11_4         a12_4           a21           a22           a11           a12 
+#>         0.564         0.766        -0.142         0.141         0.564         0.688        -0.130 
+#>           a21           a22 initialCov_11 initialCov_21 initialCov_22           v11           v22 
+#>         0.141         0.564         1.291         0.563         1.509         0.316         0.400 
+#>           v11           v22           v11           v22           v11           v22 
+#>         0.316         0.400         0.316         0.400         0.316         0.400
 ```
 
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
@@ -220,7 +279,8 @@ To specify a RI-CLPM, two random intercepts have to be added which load on the
 `y1` and `y2` variables respectively. Importantly, these random intercept
 variables themselfs are not occasion-specific. This can be achieved as follows:
 
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ a11*eta1_(u-1) + a12*eta2_(u-1)
@@ -250,17 +310,34 @@ RI2 ~~ RI2
 Note that the random intercepts `RI1` and `RI2` are not occasion-specific (as indicated
 by the lack of a subscript `_(u)`). Again, the model can be fitted with:
 
-```{r}
+
+```r
 riclpm <- lessTemplates::CLPM(model = model, 
                               data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 RI1 RI2 
+#> Names of the manifest variables: y1_u1 y2_u1 y1_u2 y2_u2 y1_u3 y2_u3 y1_u4 y2_u4 y1_u5 y2_u5 
+#> Returning lavaan syntax and data in wide format
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>           a11           a12           a21           a22           a11           a12           a21 
+#>         0.688        -0.130         0.141         0.564         0.688        -0.130         0.141 
+#>           a22         a11_4         a12_4           a21           a22           a11           a12 
+#>         0.564         0.766        -0.142         0.141         0.564         0.688        -0.130 
+#>           a21           a22 initialCov_11 initialCov_21 initialCov_22           v11           v22 
+#>         0.141         0.564         1.291         0.563         1.509         0.316         0.400 
+#>           v11           v22           v11           v22           v11           v22 
+#>         0.316         0.400         0.316         0.400         0.316         0.400
 ```
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
@@ -284,13 +361,24 @@ More details on the procedure can be found in
 
 We will use a CLPM with three indicators per latent variable. The data looks as 
 follows:
-```{r}
+
+```r
 dataset <- simulateCLPM(seed = 123)
 head(dataset)
+#> # A tibble: 6 × 8
+#>   person occasion      y1      y2      y3      y4      y5      y6
+#>    <int> <chr>      <dbl>   <dbl>   <dbl>   <dbl>   <dbl>   <dbl>
+#> 1      1 1        -1.00   -0.378   0.336   1.02    0.203   0.443 
+#> 2      1 2        -0.890  -0.543  -0.954   0.133  -0.0709 -0.736 
+#> 3      1 3         1.24   -0.242   0.598  -0.0573 -0.787  -0.226 
+#> 4      1 4         0.195  -0.0155  1.27    0.365   1.26    1.73  
+#> 5      1 5         0.841   1.61    1.83    0.245   0.814   0.0386
+#> 6      2 1         0.0618 -0.672   0.0501  1.08    0.522   1.15
 ```
 The model is given by:
 
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ a11*eta1_(u-1) + a12*eta2_(u-1)
@@ -316,43 +404,95 @@ y6_(u) ~~ v6*y6_(u)
 Note that the loadings of some items are estimated occasion-specific. The first
 item of each latent variable is assumed to show measurement invariance.
 
-```{r}
+
+```r
 clpm <- lessTemplates::CLPM(model = model, 
                             data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 
+#> Names of the manifest variables: y1_u1 y2_u1 y3_u1 y4_u1 y5_u1 y6_u1 y1_u2 y2_u2 y3_u2 y4_u2 y5_u2 y6_u2 y1_u3 y2_u3 y3_u3 y4_u3 y5_u3 y6_u3 y1_u4 y2_u4 y3_u4 y4_u4 y5_u4 y6_u4 y1_u5 y2_u5 y3_u5 y4_u5 y5_u5 y6_u5 
+#> Returning lavaan syntax and data in wide format
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>           a11           a12           a21           a22           a11           a12           a21 
+#>         0.389         0.194         0.495         0.076         0.389         0.194         0.495 
+#>           a22           a11           a12           a21           a22           a11           a12 
+#>         0.076         0.389         0.194         0.495         0.076         0.389         0.194 
+#>           a21           a22        l21_u1        l31_u1        l52_u1        l62_u1        l21_u2 
+#>         0.495         0.076         0.889         0.856         1.034         0.886         0.638 
+#>        l31_u2        l52_u2        l62_u2        l21_u3        l31_u3        l52_u3        l62_u3 
+#>         0.692         1.035         0.459         0.578         0.714         0.891         0.504 
+#>        l21_u4        l31_u4        l52_u4        l62_u4        l21_u5        l31_u5        l52_u5 
+#>         1.023         1.013         0.805         0.806         0.987         1.068         1.014 
+#>        l62_u5            v1            v2            v3            v4            v5            v6 
+#>         0.755         0.180         0.321         0.306         0.180         0.270         0.304 
+#>            v1            v2            v3            v4            v5            v6            v1 
+#>         0.180         0.321         0.306         0.180         0.270         0.304         0.180 
+#>            v2            v3            v4            v5            v6            v1            v2 
+#>         0.321         0.306         0.180         0.270         0.304         0.180         0.321 
+#>            v3            v4            v5            v6            v1            v2            v3 
+#>         0.306         0.180         0.270         0.304         0.180         0.321         0.306 
+#>            v4            v5            v6 initialCov_11 initialCov_21 initialCov_22           v11 
+#>         0.180         0.270         0.304         0.817         0.425         0.914         0.362 
+#>           v22           v11           v22           v11           v22           v11           v22 
+#>         0.269         0.362         0.269         0.362         0.269         0.362         0.269
 ```
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
 Now, let's regularized differences between the freely estimated loadings:
-```{r}
+
+```r
 clpmTransform <- transformCLPM(CLPM = clpm, 
                                parameters = c("l21_(u)", "l31_(u)",
                                               "l52_(u)", "l62_(u)"),
                                transformation = "measurementInvariance")
+#> Note: The model will not be identified without regularization.
 ```
 <details>
 <summary>Show the transformation</summary>
-```{r}
+
+```r
 cat(clpmTransform$transformation)
+#> parameters: l21, l21_u1, Delta_l21_u1, l21_u2, Delta_l21_u2, l21_u3, Delta_l21_u3, l21_u4, Delta_l21_u4, l21_u5, Delta_l21_u5, l31, l31_u1, Delta_l31_u1, l31_u2, Delta_l31_u2, l31_u3, Delta_l31_u3, l31_u4, Delta_l31_u4, l31_u5, Delta_l31_u5, l52, l52_u1, Delta_l52_u1, l52_u2, Delta_l52_u2, l52_u3, Delta_l52_u3, l52_u4, Delta_l52_u4, l52_u5, Delta_l52_u5, l62, l62_u1, Delta_l62_u1, l62_u2, Delta_l62_u2, l62_u3, Delta_l62_u3, l62_u4, Delta_l62_u4, l62_u5, Delta_l62_u5
+#> 
+#> //Transformations:
+#> l21_u1 = l21 + Delta_l21_u1;
+#> l21_u2 = l21 + Delta_l21_u2;
+#> l21_u3 = l21 + Delta_l21_u3;
+#> l21_u4 = l21 + Delta_l21_u4;
+#> l21_u5 = l21 + Delta_l21_u5;
+#> l31_u1 = l31 + Delta_l31_u1;
+#> l31_u2 = l31 + Delta_l31_u2;
+#> l31_u3 = l31 + Delta_l31_u3;
+#> l31_u4 = l31 + Delta_l31_u4;
+#> l31_u5 = l31 + Delta_l31_u5;
+#> l52_u1 = l52 + Delta_l52_u1;
+#> l52_u2 = l52 + Delta_l52_u2;
+#> l52_u3 = l52 + Delta_l52_u3;
+#> l52_u4 = l52 + Delta_l52_u4;
+#> l52_u5 = l52 + Delta_l52_u5;
+#> l62_u1 = l62 + Delta_l62_u1;
+#> l62_u2 = l62 + Delta_l62_u2;
+#> l62_u3 = l62 + Delta_l62_u3;
+#> l62_u4 = l62 + Delta_l62_u4;
+#> l62_u5 = l62 + Delta_l62_u5;
 ```
 </details>
 
 Let's fit the model with lessSEM:
-```{r,include=FALSE}
-library(lessSEM)
-lassoFit <- lasso(lavaanModel = fit, 
-                  regularized = clpmTransform$regularized, 
-                  nLambdas = 50,
-                  modifyModel = modifyModel(transformations = clpmTransform$transformation))
-```
-```{r,eval = FALSE}
+
+
+```r
 library(lessSEM)
 lassoFit <- lasso(lavaanModel = fit, 
                   regularized = clpmTransform$regularized, 
@@ -360,8 +500,45 @@ lassoFit <- lasso(lavaanModel = fit,
                   modifyModel = modifyModel(transformations = clpmTransform$transformation))
 ```
 The best parameters based on the BIC can be extracted with 
-```{r}
+
+```r
 coef(lassoFit, criterion = "BIC")
+#>                                                                                                     
+#>   Tuning         ||--||  Estimates                                                                  
+#>  ------- ------- ||--|| ---------- ---------- ---------- ---------- ---------- ---------- ----------
+#>   lambda   alpha ||--||        a11        a12        a21        a22         v1         v2         v3
+#>  ======= ======= ||--|| ========== ========== ========== ========== ========== ========== ==========
+#>   0.6681  1.0000 ||--||     0.3944     0.1823     0.4816     0.0770     0.1795     0.3252     0.3065
+#>                                                                                                  
+#>                                                                                                  
+#>  ---------- ---------- ---------- ------------- ------------- ------------- ---------- ----------
+#>          v4         v5         v6 initialCov_11 initialCov_21 initialCov_22        v11        v22
+#>  ========== ========== ========== ============= ============= ============= ========== ==========
+#>      0.1908     0.2711     0.3097        0.7969        0.4376        1.0042     0.3746     0.2455
+#>                                                                                                     
+#>                                                                                                     
+#>  ---------- ------------ ------------ ------------ ------------ ------------ ---------- ------------
+#>         l21 Delta_l21_u1 Delta_l21_u2 Delta_l21_u3 Delta_l21_u4 Delta_l21_u5        l31 Delta_l31_u1
+#>  ========== ============ ============ ============ ============ ============ ========== ============
+#>      0.8693            .            .            .            .            .     0.9033            .
+#>                                                                                          
+#>                                                                                          
+#>  ------------ ------------ ------------ ------------ ---------- ------------ ------------
+#>  Delta_l31_u2 Delta_l31_u3 Delta_l31_u4 Delta_l31_u5        l52 Delta_l52_u1 Delta_l52_u2
+#>  ============ ============ ============ ============ ========== ============ ============
+#>             .            .            .            .     0.9862            .            .
+#>                                                                                          
+#>                                                                                          
+#>  ------------ ------------ ------------ ---------- ------------ ------------ ------------
+#>  Delta_l52_u3 Delta_l52_u4 Delta_l52_u5        l62 Delta_l62_u1 Delta_l62_u2 Delta_l62_u3
+#>  ============ ============ ============ ========== ============ ============ ============
+#>             .            .            .     0.7354            .            .            .
+#>                           
+#>                           
+#>  ------------ ------------
+#>  Delta_l62_u4 Delta_l62_u5
+#>  ============ ============
+#>             .            .
 ```
 
 Note that item `y6` seems to show measurement variance, while all other items
@@ -375,7 +552,8 @@ can be found in `vignette(topic = "Parameter-transformations", package = "lessSE
 To test this, we first specify each autoregressive and
 cross-lagged parameter freely:
 
-```{r}
+
+```r
 model <- "
 # autoregressive and cross-lagged effects
 eta1_(u) ~ a11_(u)*eta1_(u-1) + a12_(u)*eta2_(u-1)
@@ -400,46 +578,89 @@ y6_(u) ~~ v6*y6_(u)
 ```
 
 Setting up the model with CLPM:
-```{r}
+
+```r
 clpm <- lessTemplates::CLPM(model = model, 
                             data = dataset)
+#> 
+#> Setting up a cross-lagged panel model.
+#> Names of the latent variables: eta1_u1 eta2_u1 eta1_u2 eta2_u2 eta1_u3 eta2_u3 eta1_u4 eta2_u4 eta1_u5 eta2_u5 
+#> Names of the manifest variables: y1_u1 y2_u1 y3_u1 y4_u1 y5_u1 y6_u1 y1_u2 y2_u2 y3_u2 y4_u2 y5_u2 y6_u2 y1_u3 y2_u3 y3_u3 y4_u3 y5_u3 y6_u3 y1_u4 y2_u4 y3_u4 y4_u4 y5_u4 y6_u4 y1_u5 y2_u5 y3_u5 y4_u5 y5_u5 y6_u5 
+#> Returning lavaan syntax and data in wide format
 fit <- lavaan::sem(model = clpm$model,
                    data = clpm$data)
 coef(fit)
+#>        a11_u2        a12_u2        a21_u2        a22_u2        a11_u3        a12_u3        a21_u3 
+#>         0.392        -0.157         0.468         0.132         0.319        -0.058         0.505 
+#>        a22_u3        a11_u4        a12_u4        a21_u4        a22_u4        a11_u5        a12_u5 
+#>         0.163         0.347         0.890         0.569         0.040         0.650         0.920 
+#>        a21_u5        a22_u5           l21           l31           l52        l62_u1           l21 
+#>         0.478        -0.036         0.887         0.907         0.992         0.863         0.887 
+#>           l31           l52        l62_u2           l21           l31           l52        l62_u3 
+#>         0.907         0.992         0.453         0.887         0.907         0.992         0.551 
+#>           l21           l31           l52        l62_u4           l21           l31           l52 
+#>         0.887         0.907         0.992         0.918         0.887         0.907         0.992 
+#>        l62_u5            v1            v2            v3            v4            v5            v6 
+#>         0.776         0.187         0.314         0.309         0.194         0.269         0.297 
+#>            v1            v2            v3            v4            v5            v6            v1 
+#>         0.187         0.314         0.309         0.194         0.269         0.297         0.187 
+#>            v2            v3            v4            v5            v6            v1            v2 
+#>         0.314         0.309         0.194         0.269         0.297         0.187         0.314 
+#>            v3            v4            v5            v6            v1            v2            v3 
+#>         0.309         0.194         0.269         0.297         0.187         0.314         0.309 
+#>            v4            v5            v6 initialCov_11 initialCov_21 initialCov_22           v11 
+#>         0.194         0.269         0.297         0.815         0.454         0.968         0.213 
+#>           v22           v11           v22           v11           v22           v11           v22 
+#>         0.244         0.213         0.244         0.213         0.244         0.213         0.244
 ```
 
 <details>
 <summary>Show entire summary</summary>
-```{r}
+
+```r
 summary(fit)
+#> Length  Class   Mode 
+#>      1 lavaan     S4
 ```
 </details>
 
 Now, let's regularized differences between the subsequent autoregressive and cross-
 lagged parameters:
-```{r}
+
+```r
 clpmTransform <- transformCLPM(CLPM = clpm, 
                                parameters = c("a11_(u)", "a12_(u)",
                                               "a21_(u)", "a22_(u)"),
                                transformation = "changepoint")
-``` 
+```
 
 <details>
 <summary>Show the transformation</summary>
-```{r}
+
+```r
 cat(clpmTransform$transformation)
+#> parameters: a11_u3, a11_u2, Delta_a11_u3, a11_u4, Delta_a11_u4, a11_u5, Delta_a11_u5, a12_u3, a12_u2, Delta_a12_u3, a12_u4, Delta_a12_u4, a12_u5, Delta_a12_u5, a21_u3, a21_u2, Delta_a21_u3, a21_u4, Delta_a21_u4, a21_u5, Delta_a21_u5, a22_u3, a22_u2, Delta_a22_u3, a22_u4, Delta_a22_u4, a22_u5, Delta_a22_u5
+#> 
+#> //Transformations:
+#> a11_u3 = a11_u2 + Delta_a11_u3;
+#> a11_u4 = a11_u3 + Delta_a11_u4;
+#> a11_u5 = a11_u4 + Delta_a11_u5;
+#> a12_u3 = a12_u2 + Delta_a12_u3;
+#> a12_u4 = a12_u3 + Delta_a12_u4;
+#> a12_u5 = a12_u4 + Delta_a12_u5;
+#> a21_u3 = a21_u2 + Delta_a21_u3;
+#> a21_u4 = a21_u3 + Delta_a21_u4;
+#> a21_u5 = a21_u4 + Delta_a21_u5;
+#> a22_u3 = a22_u2 + Delta_a22_u3;
+#> a22_u4 = a22_u3 + Delta_a22_u4;
+#> a22_u5 = a22_u4 + Delta_a22_u5;
 ```
 </details>
 
 Let's fit the model with lessSEM:
-```{r,include=FALSE}
-library(lessSEM)
-lassoFit <- lasso(lavaanModel = fit, 
-                  regularized = clpmTransform$regularized, 
-                  nLambdas = 50,
-                  modifyModel = modifyModel(transformations = clpmTransform$transformation))
-```
-```{r,eval = FALSE}
+
+
+```r
 library(lessSEM)
 lassoFit <- lasso(lavaanModel = fit, 
                   regularized = clpmTransform$regularized, 
@@ -448,8 +669,39 @@ lassoFit <- lasso(lavaanModel = fit,
 ```
 
 The best parameters based on the BIC can be extracted with 
-```{r}
+
+```r
 coef(lassoFit, criterion = "BIC")
+#>                                                                                                     
+#>   Tuning         ||--||  Estimates                                                                  
+#>  ------- ------- ||--|| ---------- ---------- ---------- ---------- ---------- ---------- ----------
+#>   lambda   alpha ||--||     a11_u2     a12_u2     a21_u2     a22_u2        l21        l31        l52
+#>  ======= ======= ||--|| ========== ========== ========== ========== ========== ========== ==========
+#>   0.4076  1.0000 ||--||     0.4100    -0.0892     0.5088     0.0936     0.8964     0.9203     0.9624
+#>                                                                                                    
+#>                                                                                                    
+#>  ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+#>      l62_u1     l62_u2     l62_u3     l62_u4     l62_u5         v1         v2         v3         v4
+#>  ========== ========== ========== ========== ========== ========== ========== ========== ==========
+#>      0.8505     0.4454     0.5362     0.8667     0.7473     0.1874     0.3155     0.3071     0.1821
+#>                                                                                                    
+#>                                                                                                    
+#>  ---------- ---------- ------------- ------------- ------------- ---------- ---------- ------------
+#>          v5         v6 initialCov_11 initialCov_21 initialCov_22        v11        v22 Delta_a11_u3
+#>  ========== ========== ============= ============= ============= ========== ========== ============
+#>      0.2746     0.2996        0.7932        0.4508        0.9979     0.2235     0.2628            .
+#>                                                                                            
+#>                                                                                            
+#>  ------------ ------------ ------------ ------------ ------------ ------------ ------------
+#>  Delta_a11_u4 Delta_a11_u5 Delta_a12_u3 Delta_a12_u4 Delta_a12_u5 Delta_a21_u3 Delta_a21_u4
+#>  ============ ============ ============ ============ ============ ============ ============
+#>             .       0.1049            .       0.8658            .            .            .
+#>                                                     
+#>                                                     
+#>  ------------ ------------ ------------ ------------
+#>  Delta_a21_u5 Delta_a22_u3 Delta_a22_u4 Delta_a22_u5
+#>  ============ ============ ============ ============
+#>             .            .            .            .
 ```
 
 Note that, for instance, `a12` does change around measurement occasion 4 and then stays constant again.
