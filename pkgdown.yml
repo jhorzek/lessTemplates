@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   Continuous-Time-SEM: Continuous-Time-SEM.html
   Cross-Lagged-Panel-Model: Cross-Lagged-Panel-Model.html
-last_built: 2023-04-15T12:13Z
+last_built: 2023-04-15T12:21Z
 urls:
   reference: https://jhorzek.github.io/lessTemplates/reference
   article: https://jhorzek.github.io/lessTemplates/articles
