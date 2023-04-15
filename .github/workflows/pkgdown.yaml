@@ -11,27 +11,27 @@ permissions:
 
 jobs:
  build:
-  runs-on: windows-latest
+  runs-on: ubuntu-latest
+  container:
+   image: ghcr.io/jhorzek/lesssem_dependencies:latest
   env:
     GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
   steps:
+    - name: Install rsync 📚
+      run: |
+       apt-get update && apt-get install -y rsync
     - uses: actions/checkout@v3
     - uses: r-lib/actions/setup-pandoc@v2
     - name: Install dependencies
-      run:  |
-          # installing all dependencies one by one while also checking if they could be loaded
-          options(install.packages.compile.from.source = "never")
-          install.packages(c("devtools", "pkgdown", "lessSEM", "rcmdcheck", "ctsemOMX", "crayon", "testthat"),
-                           dependencies = c("Depends", 
-                                             "Imports", 
-                                             "LinkingTo"),
-                           repos = 'http://cran.rstudio.com/')
+      run: install.packages(c("devtools", "pkgdown", "lessSEM"))
+      shell: Rscript {0}
+    - name: install lessTemplates
+      run: R CMD INSTALL --preclean --no-multiarch --with-keep.source . 
+    - name: update vignettes
+      run: lessTemplates:::.knitVignettes()
       shell: Rscript {0}
     - name: check lessTemplates
       run: rcmdcheck::rcmdcheck(path = ".", args = "--no-manual", error_on = "warning")
-      shell: Rscript {0}
-    - name: install lessTemplates
-      run: devtools::install(pkg = ".")
       shell: Rscript {0}
     - name: Build site
       run: pkgdown::build_site_github_pages(new_process = FALSE, examples = FALSE, install = FALSE)
