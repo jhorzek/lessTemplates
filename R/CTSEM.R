@@ -59,8 +59,10 @@
 #'
 #' # comparison
 #' AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
-#'                          Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
-#' AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = T)
+#'                          Tpoints = 5,
+#'                          n.latent = 2, n.manifest = 2,
+#'                          MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
+#' AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = TRUE)
 #' summary(AnomAuthfit)
 #' @export
 CTSEM <- function(model,
@@ -77,20 +79,20 @@ CTSEM <- function(model,
   if(!is(object = data, class2 = "data.frame"))
     data <- as.data.frame(data)
 
-  dataCTSEM <- lessTemplates:::.prepareDataCTSEM(data = data)
+  dataCTSEM <- .prepareDataCTSEM(data = data)
 
   arclData <- dataCTSEM$data
 
   # remove unnecessary white space
-  syntax <- lessTemplates:::.reduceSyntax(syntax = model)
-  syntax <- lessTemplates:::.removeWhitespace(syntax = syntax)
-  syntax <- lessTemplates:::.makeSingleLine(syntax = syntax)
+  syntax <- .reduceSyntax(syntax = model)
+  syntax <- .removeWhitespace(syntax = syntax)
+  syntax <- .makeSingleLine(syntax = syntax)
 
   # check if all dynamics are time dependent
-  lessTemplates:::.checkDynamics(syntax = syntax)
+  .checkDynamics(syntax = syntax)
 
   # find the names of all variables
-  variableNames <- lessTemplates:::.getVariableNamesCTSEM(syntax = syntax)
+  variableNames <- .getVariableNamesCTSEM(syntax = syntax)
 
   latents <- list(
     occasionDependent = variableNames$occasionDependent[!variableNames$occasionDependent %in% colnames(data)],
@@ -103,21 +105,21 @@ CTSEM <- function(model,
   )
 
   # set up discrete time model as basis
-  arclModel <- lessTemplates:::.getDiscreteBasis(syntax = syntax,
-                                                 latents = latents,
-                                                 manifests = manifests)
+  arclModel <- .getDiscreteBasis(syntax = syntax,
+                                 latents = latents,
+                                 manifests = manifests)
 
-  ctMatrices <- lessTemplates:::.getCTSEMMatrices(syntax = syntax,
-                                                  arclModel = arclModel)
+  ctMatrices <- .getCTSEMMatrices(syntax = syntax,
+                                  arclModel = arclModel)
 
   clpm <- lessTemplates::CLPM(model = arclModel$syntax,
                               data = arclData[,colnames(arclData) != "time"],
                               silent = TRUE,
                               meanstructure = grepl(pattern = "*1", x = arclModel$syntax))
 
-  transformations <- lessTemplates:::.getCTSEMTransformations(arclModel = arclModel,
-                                                              dataCTSEM = dataCTSEM,
-                                                              ctMatrices = ctMatrices)
+  transformations <- .getCTSEMTransformations(arclModel = arclModel,
+                                              dataCTSEM = dataCTSEM,
+                                              ctMatrices = ctMatrices)
 
   fit_lavaan <- lavaan::lavaan(model = clpm$model,
                                data = clpm$data,

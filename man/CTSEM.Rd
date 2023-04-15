@@ -73,7 +73,9 @@ fit@parameters[,sort(fit@parameterLabels)]
 
 # comparison
 AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
-                         Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
-AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = T)
+                         Tpoints = 5,
+                         n.latent = 2, n.manifest = 2,
+                         MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
+AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = TRUE)
 summary(AnomAuthfit)
 }

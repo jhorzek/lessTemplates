@@ -23,8 +23,9 @@
 #' @examples
 #' # Example 1:
 #' # The following simulation and analysis of a random intercept cross-lagged panel model
-#' # is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
-#' # Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+#' # is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021)
+#' # Three Extensions of the Random Intercept Cross-Lagged Panel Model,
+#' # Structural Equation Modeling: A Multidisciplinary Journal,
 #' # 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
 #' #
 #' # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html
@@ -104,9 +105,9 @@ CLPM <- function(model,
 
   if(!silent)
     cat("\nSetting up a cross-lagged panel model.\n")
-  RAM <- lessTemplates:::.CLPM(model = model,
-                               data = data,
-                               silent = silent)
+  RAM <- .CLPM(model = model,
+               data = data,
+               silent = silent)
 
   if(addManifestVar == "invariant"){
     manifestVar <- diag(RAM@S[RAM@manifest, RAM@manifest])
@@ -148,8 +149,8 @@ CLPM <- function(model,
     cat("Names of the latent variables:", RAM@latent, "\n")
   if(!silent)
     cat("Names of the manifest variables:", RAM@manifest, "\n")
-  lavaanSyntax <- lessTemplates:::.RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
-  dataWide <- try(lessTemplates:::.toWide(data = data, RAM = RAM))
+  lavaanSyntax <- .RAM2Lavaan(RAM = RAM, meanstructure = meanstructure)
+  dataWide <- try(.toWide(data = data, RAM = RAM))
   if(is(object = dataWide, class2 = "try-error")){
     warning("Could not transform your data set from long to wide. Returning only the model")
     return(list(model = lavaanSyntax,
@@ -190,17 +191,17 @@ CLPM <- function(model,
   nOccasions <- length(unique(data$occasion))
 
   # remove unnecessary white space
-  syntax <- lessTemplates:::.reduceSyntax(syntax = model)
-  syntax <- lessTemplates:::.removeWhitespace(syntax = syntax)
-  syntax <- lessTemplates:::.makeSingleLine(syntax = syntax)
+  syntax <- .reduceSyntax(syntax = model)
+  syntax <- .removeWhitespace(syntax = syntax)
+  syntax <- .makeSingleLine(syntax = syntax)
 
   # check for occasion specific statements
-  ocasionSpecific <- lessTemplates:::.replaceOccasionSpecific(syntax = syntax)
+  ocasionSpecific <- .replaceOccasionSpecific(syntax = syntax)
   syntax <- ocasionSpecific$syntax
   isOccasionSpecific <- ocasionSpecific$isOccasionSpecific
 
   # find the names of all variables
-  variableNames <- lessTemplates:::.getVariableNamesCLPM(syntax = syntax)
+  variableNames <- .getVariableNamesCLPM(syntax = syntax)
 
   latents <- list(
     occasionDependent = variableNames$occasionDependent[!variableNames$occasionDependent %in% colnames(data)],
@@ -315,11 +316,11 @@ CLPM <- function(model,
       if(isOccasionSpecific_u[i]){
         # skip if it does not concern the current occasion
         if(!(grepl(pattern = paste0("_u",u, "=~"), x = syntax_u[i]) |
-            grepl(pattern = paste0("_u",u, "~"), x = syntax_u[i]))) next
+             grepl(pattern = paste0("_u",u, "~"), x = syntax_u[i]))) next
 
       }
 
-      splitted <- lessTemplates:::.splitEquation(equation = syntax_u[i])
+      splitted <- .splitEquation(equation = syntax_u[i])
 
       if(all(splitted$operator == "=~")){
 
@@ -369,7 +370,7 @@ CLPM <- function(model,
   }
 
   # fill covariances of initial time points
-  maxLag <- lessTemplates:::.findMaxLag(occasions = occasions)
+  maxLag <- .findMaxLag(occasions = occasions)
 
   S <- .fillCovariances(S = S,
                         latents = latents,

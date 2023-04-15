@@ -1,7 +1,9 @@
 #' simulateExample1
 #'
 #' Second order bivariate CLPM
+#' @param seed seed used to simulate data
 #' @return list with data and model
+#' @export
 simulateExample1 <- function(seed = 123){
   set.seed(seed)
 
@@ -73,7 +75,9 @@ eta2_(u) =~ 1*y4_(u) + l5*y5_(u) + l6*y6_(u)
 #' 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
 #'
 #' see https://jeroendmulder.github.io/RI-CLPM/lavaan.html
+#' @param seed seed used to simulate data
 #' @return data in long format
+#' @export
 simulateRICLPM <- function(seed = 123){
   set.seed(seed)
 
@@ -162,7 +166,9 @@ simulateRICLPM <- function(seed = 123){
 #' 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
 #'
 #' see https://jeroendmulder.github.io/RI-CLPM/lavaan.html
+#' @param seed seed used to simulate data
 #' @return data in long format
+#' @export
 simulateCLPM <- function(seed = 123){
   set.seed(seed)
 

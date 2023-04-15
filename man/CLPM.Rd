@@ -45,8 +45,9 @@ the readable one to reduce the likelihood of errors.
 \examples{
 # Example 1:
 # The following simulation and analysis of a random intercept cross-lagged panel model
-# is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021) Three Extensions of the Random
-# Intercept Cross-Lagged Panel Model, Structural Equation Modeling: A Multidisciplinary Journal,
+# is based on the syntax from Jeroen D. Mulder & Ellen L. Hamaker (2021)
+# Three Extensions of the Random Intercept Cross-Lagged Panel Model,
+# Structural Equation Modeling: A Multidisciplinary Journal,
 # 28:4, 638-648, DOI: 10.1080/10705511.2020.1784738
 #
 # See https://jeroendmulder.github.io/RI-CLPM/lavaan.html

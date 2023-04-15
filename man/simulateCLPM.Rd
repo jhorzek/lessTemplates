@@ -6,6 +6,9 @@
 \usage{
 simulateCLPM(seed = 123)
 }
+\arguments{
+\item{seed}{seed used to simulate data}
+}
 \value{
 data in long format
 }
