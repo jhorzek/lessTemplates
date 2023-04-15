@@ -12,6 +12,7 @@
 #' @param definitionVariables data.frame with definition variables. Must have
 #' values for each person and must have column names. All column names must
 #' occur in the lavaanSytax as modifiers
+#' @param data data set used in lavaan model
 #' @param ... additional arguments passed to lavaan
 #' @examples
 #' # We will demonstrate the use of definition variables with a latent growth curve

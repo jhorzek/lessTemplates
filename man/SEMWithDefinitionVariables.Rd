@@ -15,6 +15,8 @@ defined in the definitionVariables}
 values for each person and must have column names. All column names must
 occur in the lavaanSytax as modifiers}
 
+\item{data}{data set used in lavaan model}
+
 \item{...}{additional arguments passed to lavaan}
 }
 \description{

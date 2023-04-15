@@ -14,7 +14,7 @@
 
   # let's make the difference between parameter labels and parameter values more
   # specific:
-  RAM <- lessTemplates:::.valueOrLabel(RAM)
+  RAM <- .valueOrLabel(RAM)
 
   for(l in RAM@latent){
 
