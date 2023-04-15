@@ -31,9 +31,7 @@ jobs:
       run: rcmdcheck::rcmdcheck(path = ".", args = "--no-manual", error_on = "warning")
       shell: Rscript {0}
     - name: install lessTemplates
-      run: R CMD INSTALL --preclean --no-multiarch --with-keep.source .
-    - name: update vignettes
-      run: lessSEM:::.knitVignettes()
+      run: devtools::install(pkg = ".")
       shell: Rscript {0}
     - name: Build site
       run: pkgdown::build_site_github_pages(new_process = FALSE, examples = FALSE, install = FALSE)
