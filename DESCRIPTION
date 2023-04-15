@@ -1,7 +1,7 @@
 Package: lessTemplates
 Type: Package
 Title: Provides transformation for use in lessSEM
-Version: 0.1.3
+Version: 0.1.4
 Author: Jannik H. Orzek
 Maintainer: Jannik H. Orzek <orzek@mpib-berlin.mpg.de>
 Description: lessTemplates provides convenience functions which allow for 
