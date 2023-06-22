@@ -19,16 +19,20 @@
   for(l in RAM@latent){
 
     # loadings
+    loadings_l <- RAM@A[RAM@manifest, l,drop=FALSE]
+    loadings_l <- loadings_l[loadings_l != "0",,drop = FALSE]
     loadings <- c(
       loadings,
-      paste0(l, " =~ ", paste0(paste0(RAM@A[RAM@manifest, l], "*", RAM@manifest), collapse = " + "))
+      paste0(l, " =~ ", paste0(paste0(loadings_l[,l], "*", rownames(loadings_l)), collapse = " + "))
     )
 
     # regressions
     if(all(RAM@A[l, c(RAM@manifest, RAM@latent)] == "0")) next
+    regressions_l <- RAM@A[l, c(RAM@manifest, RAM@latent[RAM@latent != l]),drop=FALSE]
+    regressions_l <- regressions_l[,regressions_l != "0",drop = FALSE]
     regressions <- c(
       regressions,
-      paste0(l, " ~ ", paste0(paste0(RAM@A[l, c(RAM@manifest, RAM@latent[RAM@latent != l])], "*", c(RAM@manifest, RAM@latent[RAM@latent != l])), collapse = " + "))
+      paste0(l, " ~ ", paste0(paste0(regressions_l[l,], "*", colnames(regressions_l)), collapse = " + "))
     )
 
   }
@@ -36,10 +40,12 @@
   for(m in RAM@manifest){
 
     # regressions
-    if(all(RAM@A[l, RAM@manifest] == "0")) next
+    if(all(RAM@A[m, RAM@manifest] == "0")) next
+    regressions_m <- RAM@A[m, c(RAM@manifest, RAM@latent[RAM@latent != l]),drop=FALSE]
+    regressions_m <- regressions_m[,regressions_m != "0",drop = FALSE]
     regressions <- c(
       regressions,
-      paste0(m, " ~ ", paste0(paste0(RAM@A[m, RAM@manifest[RAM@manifest != m]], "*", RAM@manifest[RAM@manifest != m]), collapse = " + "))
+      paste0(m, " ~ ", paste0(paste0(regressions_m[m,], "*", colnames(regressions_m)), collapse = " + "))
     )
 
   }
@@ -49,6 +55,13 @@
     # covariances
     S_i <- RAM@S[i,, drop = FALSE]
     select <- lower.tri(RAM@S, diag = TRUE)[which(rownames(RAM@S) == i),,drop = FALSE]
+    # lavaan automatically adds more latent variables if covariances between latents
+    # and manifests are specified, even if they are zero. So, we will also drop all
+    # zero - covariances between these variables
+    if(i %in% RAM@latent){
+      select <- select & !((colnames(S_i) %in% RAM@manifest) & (S_i == "0"))
+    }
+
     S_i <- S_i[select]
     covariances <- c(
       covariances,

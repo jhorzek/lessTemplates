@@ -50,7 +50,8 @@ eta2(0) ~ 1
                            Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
   AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel, useOptimizer = TRUE)
 
-  testthat::expect_equal(abs(AnomAuthfit$mxobj$fitfunction$result[[1]] - fit@fits$m2LL[1]) < 1e-1, TRUE)
+  testthat::expect_equal(abs(AnomAuthfit$mxobj$fitfunction$result[[1]] - fit@fits$m2LL[1])/
+                           AnomAuthfit$mxobj$fitfunction$result[[1]] < 1e-5, TRUE)
   testthat::expect_equal(all(abs(AnomAuthfit$mxobj$DRIFT$values - ctsem$transformationList$DRIFT) < 1e-1), TRUE)
   testthat::expect_equal(all(abs(AnomAuthfit$mxobj$DIFFUSION$result - ctsem$transformationList$DIFFUSION) < 1e-1), TRUE)
 
